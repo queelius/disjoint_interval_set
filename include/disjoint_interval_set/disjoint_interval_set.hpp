@@ -1,6 +1,8 @@
 #pragma once
 
 #include <vector>
+#include <algorithm>
+#include <optional>
 #include "disjoint_interval_set_algorithms.hpp"
 #include "interval.hpp"
 
@@ -14,8 +16,9 @@ namespace disjoint_interval_set
    */
   template <typename I = interval<double>>
   class disjoint_interval_set {
-    friend auto operator*<>(disjoint_interval_set const &,
-                            disjoint_interval_set const &);
+    template<typename U>
+    friend auto operator*(disjoint_interval_set<U> const &,
+                          disjoint_interval_set<U> const &);
   public:
     using interval_type = I;
     using value_type = typename I::value_type;
@@ -26,11 +29,11 @@ namespace disjoint_interval_set
     disjoint_interval_set(const disjoint_interval_set &) = default;
 
     // accessors
-    auto supremum() const { return empty() ? std::nullopt : supremum(s_.back()); }
-    auto infimum() const { return empty() ? std::nullopt : infimum(s_.front()); }
+    auto supremum() const { return empty() ? std::optional<value_type>{} : disjoint_interval_set::supremum(s_.back()); }
+    auto infimum() const { return empty() ? std::optional<value_type>{} : disjoint_interval_set::infimum(s_.front()); }
     auto contains(value_type v) const {
-      return any_of(begin(), end(), [v](I const &i)
-                    { return i.contains(v); });
+      return std::any_of(begin(), end(), [v](I const &i)
+                         { return i.contains(v); });
     }
     auto empty() const { return s_.empty(); }
     auto begin() const { return s_.begin(); }
@@ -48,7 +51,7 @@ namespace disjoint_interval_set
    */
 
   // subset predicate
-  template <typename I, typename A, typename C>
+  template <typename I>
   auto operator<=(disjoint_interval_set<I> const &lhs,
                   disjoint_interval_set<I> const &rhs) {
     auto i = lhs.begin();
@@ -92,7 +95,7 @@ namespace disjoint_interval_set
   template <typename I>
   auto operator>(disjoint_interval_set<I> const &lhs,
                  disjoint_interval_set<I> const &rhs) {
-    return (lhs >= lhs) && (lhs != rhs);
+    return (lhs >= rhs) && (lhs != rhs);
   }
 
   /**
@@ -101,9 +104,9 @@ namespace disjoint_interval_set
 
   // intersection
   template <typename I>
-  auto operator*(disjoint_interval_set<I> lhs,
-                 disjoint_interval_set<I> rhs) {
-    return ~((~move(lhs)) + (~move(rhs)));
+  auto operator*(disjoint_interval_set<I> const& lhs,
+                 disjoint_interval_set<I> const& rhs) {
+    return ~((~lhs) + (~rhs));
   }
 
   template <typename I>
@@ -113,16 +116,16 @@ namespace disjoint_interval_set
   }
 
   // complement
-  template <typename T>
-  auto operator~(disjoint_interval_set<T> x) {
-    x.s_ = complement_disjoint_interval_set(move(x.s_));
+  template <typename I>
+  auto operator~(disjoint_interval_set<I> x) {
+    x.s_ = complement_disjoint_interval_set(std::move(x.s_));
     return x;
   }
 
   // set-difference
-  template <typename T>
-  auto operator-(disjoint_interval_set<T> lhs, disjoint_interval_set<T> rhs) {
-    return move(lhs) * (~move(rhs));
+  template <typename I>
+  auto operator-(disjoint_interval_set<I> const& lhs, disjoint_interval_set<I> const& rhs) {
+    return lhs * (~rhs);
   }
 
   // union
@@ -132,8 +135,8 @@ namespace disjoint_interval_set
     if (lhs.empty()) return rhs;
     if (rhs.empty()) return lhs;
 
-    rhs.s_.insert(rhs.s_.end(), lhs.s_.begin(), lhs.s_.end());
-    rhs.s_ = disjoint_interval_set<I>(rhs.s_.begin(), rhs.s_.end()));
+    rhs.s_.insert(rhs.s_.end(), lhs.begin(), lhs.end());
+    rhs.s_ = merge_overlapping_intervals(std::move(rhs.s_));
     return rhs;
   }
 }

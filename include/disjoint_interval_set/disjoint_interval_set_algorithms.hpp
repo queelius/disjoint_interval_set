@@ -6,22 +6,27 @@ using std::sort;
 using std::numeric_limits;
 
 namespace disjoint_interval_set {
+
+	template <typename Set>
+	auto merge_overlapping_intervals(Set s) {
+		return make_disjoint_interval_set(s);
+	}
 	template <typename Set>
 	auto make_disjoint_interval_set(Set s) {
 		using interval_type = typename Set::value_type;
 		sort(s.begin(), s.end(), std::less<interval_type>{});
 
-		auto l = infinum(*s.begin());
-		auto r = supremum(*s.begin());
+		auto l = infimum(*s.begin()).value();
+		auto r = supremum(*s.begin()).value();
 		auto j = s.begin();
 		for (const auto& i : s) {
-			if (infimum(i) > r) {
+			if (infimum(i).value() > r) {
 				*j++ = interval_type(l, r);
-				l = infimum(i);
-				r = supremum(i);
+				l = infimum(i).value();
+				r = supremum(i).value();
 			}
-			else if (supremum(i) > r) {
-				r = supremum(i);
+			else if (supremum(i).value() > r) {
+				r = supremum(i).value();
 			}
 		}
 		*j++ = interval_type(l, r);
@@ -67,16 +72,20 @@ namespace disjoint_interval_set {
 
 		sort(s.begin(), s.end(),
 			[](interval const & v1, interval const & v2) {
-					if (infimum(v1) < infimum(v2)) return true;
-					if (infimum(v2) < infimum(v1)) return false;
-					return !is_left_open(v1) && is_right_open(v2);
+					auto inf1 = infimum(v1);
+					auto inf2 = infimum(v2);
+					if (!inf1.has_value()) return true;
+					if (!inf2.has_value()) return false;
+					if (inf1.value() < inf2.value()) return true;
+					if (inf2.value() < inf1.value()) return false;
+					return !is_left_open(v1) && is_left_open(v2);
 				});
 
 		Set comp;
 		auto lr = l;
 		for (const auto& i : s)	{
-			if (i.min() != l) comp.push_back(interval(lr, i.min()));
-			lr = i.max();
+			if (infimum(i).value() != l) comp.push_back(interval(lr, infimum(i).value()));
+			lr = supremum(i).value();
 		}
 		if (lr != u) comp.push_back(interval(lr, u));
 		return comp;

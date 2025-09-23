@@ -106,7 +106,7 @@ namespace disjoint_interval_set
        * 
        * @return interval<T>
        */
-      interval() : left_(0), right_(-1), open_left_(true), open_right_(true) {};
+      interval() : left(0), right(-1), left_open(true), right_open(true) {};
 
       /**
        * Constructs an interval containing all elements between left and right,
@@ -121,7 +121,7 @@ namespace disjoint_interval_set
        * @return interval<T>
        */
       interval(T left, T right, bool left_open = false, bool right_open = false) :
-          left(left), right(right), left_open(left_open), right_open(right_open)) {};
+          left(left), right(right), left_open(left_open), right_open(right_open) {};
 
       /**
        * @brief Copy constructor.
@@ -153,12 +153,12 @@ namespace disjoint_interval_set
       /**
        * @brief The left endpoint of the interval.
        */
-      T const left, right;
+      T left, right;
 
       /**
        * @brief The left endpoint is open.
        */
-      bool const left_open, right_open;
+      bool left_open, right_open;
   };
 
   /**
@@ -205,7 +205,7 @@ namespace disjoint_interval_set
    * @return The left endpoint of interval x, or std::nullopt if x is empty.
    */
   template <typename T>
-  auto infimum(interval<T> const & x) { return x.empty() ? std::nullopt : x.left; }
+  auto infimum(interval<T> const & x) { return x.empty() ? std::optional<T>{} : std::optional<T>{x.left}; }
 
 /**
    * @brief Computes the supremum of an interval.
@@ -214,7 +214,7 @@ namespace disjoint_interval_set
    * @return The right endpoint of interval x, or std::nullopt if x is empty.
    */
   template <typename T>
-  auto supremum(interval<T> const & x) { return x.empty() ? std::nullopt : x.right; }
+  auto supremum(interval<T> const & x) { return x.empty() ? std::optional<T>{} : std::optional<T>{x.right}; }
 
 /**
    * @brief Checks if one interval is a subset of another.
@@ -226,10 +226,11 @@ namespace disjoint_interval_set
   template <typename T>
   auto operator<(interval<T> const & lhs, interval<T> const & rhs)
   {
-    return !lhs.empty() || empty(lhs) ||
-      !(rhs.left < lhs.left || rhs.right > lhs.right) ||
-      !(rhs.left == lhs.left && !rhs.left_open && lhs.open_left) ||
-      !(rhs.right == lhs.right && !rhs.right_open && lhs.open_right);
+    if (lhs.empty()) return true;
+    if (rhs.empty()) return false;
+    bool left_ok = (rhs.left < lhs.left) || (rhs.left == lhs.left && (rhs.left_open || !lhs.left_open));
+    bool right_ok = (rhs.right > lhs.right) || (rhs.right == lhs.right && (rhs.right_open || !lhs.right_open));
+    return left_ok && right_ok;
   }
 
   /**
@@ -242,7 +243,7 @@ namespace disjoint_interval_set
   template <typename T>
   auto operator==(interval<T> const & lhs, interval<T> const & rhs)
   {
-    return (lhs.empty() && rhs.empty(x)) ||
+    return (lhs.empty() && rhs.empty()) ||
       (lhs.left == rhs.left && lhs.right == rhs.right &&
        lhs.left_open == rhs.left_open && lhs.right_open == rhs.right_open);
   }
@@ -280,27 +281,27 @@ namespace disjoint_interval_set
     T l, r;
     bool l_open, r_open;
 
-    if (inf(y) >= inf(x)) {
-      l = inf(y);
-      if (inf(y) == inf(x))
+    if (infimum(y).value_or(0) >= infimum(x).value_or(0)) {
+      l = infimum(y).value();
+      if (infimum(y) == infimum(x))
         l_open = y.left_open && x.left_open;
       else
         l_open = y.left_open;
     }
     else {
-      l = inf(x);
+      l = infimum(x).value();
       l_open = x.left_open;
     }
 
-    if (sup(y) <= sup(x)) {
-      r = sup(y);
-      if (sup(y) == sup(x))
+    if (supremum(y).value_or(0) <= supremum(x).value_or(0)) {
+      r = supremum(y).value();
+      if (supremum(y) == supremum(x))
         r_open = y.right_open && x.right_open;
       else
         r_open = y.right_open;					
     }
     else {
-      r = sup(x);
+      r = supremum(x).value();
       r_open = x.right_open;
     }
 
@@ -323,8 +324,12 @@ struct std::less<disjoint_interval_set::interval<T>>
     disjoint_interval_set::interval<T> const & v1,
     disjoint_interval_set::interval<T> const & v2) const
   {
-    if (inf(v1) < inf(v2)) return true;
-    else if (inf(v2) < inf(v1)) return false;
-    else return !v1.is_left_open && v2.is_right_open;
+    auto inf1 = infimum(v1);
+    auto inf2 = infimum(v2);
+    if (!inf1.has_value()) return true;
+    if (!inf2.has_value()) return false;
+    if (inf1.value() < inf2.value()) return true;
+    else if (inf2.value() < inf1.value()) return false;
+    else return !v1.left_open && v2.left_open;
   }
 };
