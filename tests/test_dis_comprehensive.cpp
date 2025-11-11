@@ -1,66 +1,9 @@
-/**
- * Comprehensive unit tests for the disjoint_interval_set class
- * Goal: Achieve >95% code coverage for disjoint_interval_set.hpp
- */
-
+#include <gtest/gtest.h>
 #include "../include/dis/dis.hpp"
-#include <cassert>
-#include <iostream>
-#include <sstream>
 #include <vector>
 #include <algorithm>
-#include <numeric>
-#include <set>
-#include <random>
-#include <chrono>
 
 using namespace dis;
-
-// Test framework
-int tests_run = 0;
-int tests_passed = 0;
-
-#define TEST(name) void name(); \
-    struct name##_runner { \
-        name##_runner() { \
-            std::cout << "Running " #name "... "; \
-            tests_run++; \
-            try { \
-                name(); \
-                std::cout << "PASSED\n"; \
-                tests_passed++; \
-            } catch (const std::exception& e) { \
-                std::cout << "FAILED: " << e.what() << '\n'; \
-            } \
-        } \
-    } name##_instance; \
-    void name()
-
-#define ASSERT(condition) \
-    if (!(condition)) { \
-        throw std::runtime_error("Assertion failed: " #condition); \
-    }
-
-#define ASSERT_EQ(a, b) \
-    if (!((a) == (b))) { \
-        std::ostringstream oss; \
-        oss << "Assertion failed: " << (a) << " != " << (b); \
-        throw std::runtime_error(oss.str()); \
-    }
-
-#define ASSERT_NE(a, b) \
-    if ((a) == (b)) { \
-        std::ostringstream oss; \
-        oss << "Assertion failed: " << (a) << " == " << (b); \
-        throw std::runtime_error(oss.str()); \
-    }
-
-#define ASSERT_NEAR(a, b, epsilon) \
-    if (std::abs((a) - (b)) > (epsilon)) { \
-        std::ostringstream oss; \
-        oss << "Assertion failed: " << (a) << " not near " << (b); \
-        throw std::runtime_error(oss.str()); \
-    }
 
 using real_set = disjoint_interval_set<interval<double>>;
 using int_set = disjoint_interval_set<interval<int>>;
@@ -71,22 +14,22 @@ using int_interval = interval<int>;
 // CONSTRUCTION TESTS
 // ======================================================================
 
-TEST(test_default_construction) {
+TEST(ConstructionTest, DefaultConstruction) {
     real_set set;
-    ASSERT(set.is_empty());
+    ASSERT_TRUE(set.empty());
     ASSERT_EQ(set.size(), 0);
-    ASSERT(!set.contains(0));
+    ASSERT_FALSE(set.contains(0));
 }
 
-TEST(test_single_interval_construction) {
+TEST(ConstructionTest, SingleIntervalConstruction) {
     auto interval = real_interval::closed(0, 10);
     real_set set(interval);
-    ASSERT(!set.is_empty());
+    ASSERT_FALSE(set.empty());
     ASSERT_EQ(set.size(), 1);
-    ASSERT(set.contains(5));
+    ASSERT_TRUE(set.contains(5));
 }
 
-TEST(test_initializer_list_construction) {
+TEST(ConstructionTest, InitializerListConstruction) {
     // Non-overlapping intervals
     real_set set1{
         real_interval::closed(0, 10),
@@ -106,7 +49,7 @@ TEST(test_initializer_list_construction) {
     // Empty intervals should be ignored
     real_set set3{
         real_interval::closed(0, 10),
-        real_interval::empty(),
+        real_interval{},
         real_interval::closed(20, 30)
     };
     ASSERT_EQ(set3.size(), 2);
@@ -120,7 +63,7 @@ TEST(test_initializer_list_construction) {
     ASSERT_EQ(set4.size(), 1); // All should merge
 }
 
-TEST(test_range_construction) {
+TEST(ConstructionTest, RangeConstruction) {
     std::vector<real_interval> intervals = {
         real_interval::closed(0, 10),
         real_interval::closed(20, 30),
@@ -130,30 +73,30 @@ TEST(test_range_construction) {
     ASSERT_EQ(set.size(), 3);
 }
 
-TEST(test_named_constructors) {
+TEST(ConstructionTest, NamedConstructors) {
     // empty
-    auto empty = real_set::empty();
-    ASSERT(empty.is_empty());
+    auto empty = real_set{};
+    ASSERT_TRUE(empty.empty());
 
     // point
     auto point = real_set::point(5.5);
     ASSERT_EQ(point.size(), 1);
-    ASSERT(point.contains(5.5));
-    ASSERT(!point.contains(5.49));
+    ASSERT_TRUE(point.contains(5.5));
+    ASSERT_FALSE(point.contains(5.49));
 
     // unbounded
     auto unbounded = real_set::unbounded();
     ASSERT_EQ(unbounded.size(), 1);
-    ASSERT(unbounded.contains(0));
-    ASSERT(unbounded.contains(1e100));
-    ASSERT(unbounded.contains(-1e100));
+    ASSERT_TRUE(unbounded.contains(0));
+    ASSERT_TRUE(unbounded.contains(1e100));
+    ASSERT_TRUE(unbounded.contains(-1e100));
 }
 
 // ======================================================================
 // QUERY TESTS
 // ======================================================================
 
-TEST(test_containment_value) {
+TEST(QueryTest, ContainmentValue) {
     auto set = real_set{
         real_interval::closed(0, 10),
         real_interval::closed(20, 30),
@@ -161,46 +104,46 @@ TEST(test_containment_value) {
     };
 
     // Points in intervals
-    ASSERT(set.contains(5));
-    ASSERT(set.contains(25));
-    ASSERT(set.contains(45));
+    ASSERT_TRUE(set.contains(5));
+    ASSERT_TRUE(set.contains(25));
+    ASSERT_TRUE(set.contains(45));
 
     // Boundary points
-    ASSERT(set.contains(0));
-    ASSERT(set.contains(10));
-    ASSERT(set.contains(20));
-    ASSERT(set.contains(30));
-    ASSERT(!set.contains(40));  // open interval
-    ASSERT(!set.contains(50));  // open interval
+    ASSERT_TRUE(set.contains(0));
+    ASSERT_TRUE(set.contains(10));
+    ASSERT_TRUE(set.contains(20));
+    ASSERT_TRUE(set.contains(30));
+    ASSERT_FALSE(set.contains(40));  // open interval
+    ASSERT_FALSE(set.contains(50));  // open interval
 
     // Points outside intervals
-    ASSERT(!set.contains(-1));
-    ASSERT(!set.contains(15));
-    ASSERT(!set.contains(35));
-    ASSERT(!set.contains(60));
+    ASSERT_FALSE(set.contains(-1));
+    ASSERT_FALSE(set.contains(15));
+    ASSERT_FALSE(set.contains(35));
+    ASSERT_FALSE(set.contains(60));
 }
 
-TEST(test_containment_interval) {
+TEST(QueryTest, ContainmentInterval) {
     auto set = real_set{
         real_interval::closed(0, 20),
         real_interval::closed(30, 50)
     };
 
     // Contained intervals
-    ASSERT(set.contains(real_interval::closed(5, 15)));
-    ASSERT(set.contains(real_interval::closed(35, 45)));
-    ASSERT(set.contains(real_interval::point(10)));
+    ASSERT_TRUE(set.contains(real_interval::closed(5, 15)));
+    ASSERT_TRUE(set.contains(real_interval::closed(35, 45)));
+    ASSERT_TRUE(set.contains(real_interval::point(10)));
 
     // Not contained
-    ASSERT(!set.contains(real_interval::closed(15, 25)));  // spans gap
-    ASSERT(!set.contains(real_interval::closed(25, 35)));  // spans gap
-    ASSERT(!set.contains(real_interval::closed(60, 70)));  // outside
+    ASSERT_FALSE(set.contains(real_interval::closed(15, 25)));  // spans gap
+    ASSERT_FALSE(set.contains(real_interval::closed(25, 35)));  // spans gap
+    ASSERT_FALSE(set.contains(real_interval::closed(60, 70)));  // outside
 
     // Empty interval
-    ASSERT(set.contains(real_interval::empty()));
+    ASSERT_TRUE(set.contains(real_interval{}));
 }
 
-TEST(test_subset_superset) {
+TEST(QueryTest, SubsetSuperset) {
     auto a = real_set{
         real_interval::closed(0, 10),
         real_interval::closed(20, 30)
@@ -213,42 +156,42 @@ TEST(test_subset_superset) {
         real_interval::closed(0, 15)
     };
 
-    ASSERT(b.subset_of(a));
-    ASSERT(!a.subset_of(b));
-    ASSERT(!c.subset_of(a));  // c overlaps outside a
+    ASSERT_TRUE(b.subset_of(a));
+    ASSERT_FALSE(a.subset_of(b));
+    ASSERT_FALSE(c.subset_of(a));  // c overlaps outside a
 
-    ASSERT(a.superset_of(b));
-    ASSERT(!b.superset_of(a));
-    ASSERT(!a.superset_of(c));
+    ASSERT_TRUE(a.superset_of(b));
+    ASSERT_FALSE(b.superset_of(a));
+    ASSERT_FALSE(a.superset_of(c));
 
     // Self-relation
-    ASSERT(a.subset_of(a));
-    ASSERT(a.superset_of(a));
+    ASSERT_TRUE(a.subset_of(a));
+    ASSERT_TRUE(a.superset_of(a));
 
     // Empty set
-    ASSERT(real_set::empty().subset_of(a));
-    ASSERT(a.superset_of(real_set::empty()));
+    ASSERT_TRUE(real_set{}.subset_of(a));
+    ASSERT_TRUE(a.superset_of(real_set{}));
 }
 
-TEST(test_overlaps) {
+TEST(QueryTest, Overlaps) {
     auto a = real_set{real_interval::closed(0, 10)};
     auto b = real_set{real_interval::closed(5, 15)};
     auto c = real_set{real_interval::closed(20, 30)};
 
-    ASSERT(a.overlaps(b));
-    ASSERT(b.overlaps(a));
-    ASSERT(!a.overlaps(c));
-    ASSERT(!c.overlaps(a));
+    ASSERT_TRUE(a.overlaps(b));
+    ASSERT_TRUE(b.overlaps(a));
+    ASSERT_FALSE(a.overlaps(c));
+    ASSERT_FALSE(c.overlaps(a));
 
     // Empty set doesn't overlap
-    ASSERT(!a.overlaps(real_set::empty()));
+    ASSERT_FALSE(a.overlaps(real_set{}));
 }
 
 // ======================================================================
 // SET OPERATION TESTS
 // ======================================================================
 
-TEST(test_union_operation) {
+TEST(SetOperationTest, Union) {
     auto a = real_set{
         real_interval::closed(0, 10),
         real_interval::closed(20, 30)
@@ -260,12 +203,12 @@ TEST(test_union_operation) {
 
     auto result = a | b;  // union
     ASSERT_EQ(result.size(), 2);
-    ASSERT(result.contains(real_interval::closed(0, 15)));
-    ASSERT(result.contains(real_interval::closed(20, 35)));
+    ASSERT_TRUE(result.contains(real_interval::closed(0, 15)));
+    ASSERT_TRUE(result.contains(real_interval::closed(20, 35)));
 
     // Union with empty
-    ASSERT_EQ(a | real_set::empty(), a);
-    ASSERT_EQ(real_set::empty() | a, a);
+    ASSERT_EQ(a | real_set{}, a);
+    ASSERT_EQ(real_set{} | a, a);
 
     // Union with self
     ASSERT_EQ(a | a, a);
@@ -276,7 +219,7 @@ TEST(test_union_operation) {
     ASSERT_EQ(a_copy, result);
 }
 
-TEST(test_intersection_operation) {
+TEST(SetOperationTest, Intersection) {
     auto a = real_set{
         real_interval::closed(0, 10),
         real_interval::closed(20, 30)
@@ -288,19 +231,19 @@ TEST(test_intersection_operation) {
 
     auto result = a & b;  // intersection
     ASSERT_EQ(result.size(), 2);
-    ASSERT(result.contains(real_interval::closed(5, 10)));
-    ASSERT(result.contains(real_interval::closed(25, 30)));
+    ASSERT_TRUE(result.contains(real_interval::closed(5, 10)));
+    ASSERT_TRUE(result.contains(real_interval::closed(25, 30)));
 
     // Intersection with empty
-    ASSERT_EQ(a & real_set::empty(), real_set::empty());
-    ASSERT_EQ(real_set::empty() & a, real_set::empty());
+    ASSERT_EQ(a & real_set{}, real_set{});
+    ASSERT_EQ(real_set{} & a, real_set{});
 
     // Intersection with self
     ASSERT_EQ(a & a, a);
 
     // Disjoint sets
     auto c = real_set{real_interval::closed(40, 50)};
-    ASSERT_EQ(a & c, real_set::empty());
+    ASSERT_EQ(a & c, real_set{});
 
     // Test operator&=
     auto a_copy = a;
@@ -308,7 +251,7 @@ TEST(test_intersection_operation) {
     ASSERT_EQ(a_copy, result);
 }
 
-TEST(test_difference_operation) {
+TEST(SetOperationTest, Difference) {
     auto a = real_set{
         real_interval::closed(0, 20),
         real_interval::closed(30, 50)
@@ -319,15 +262,15 @@ TEST(test_difference_operation) {
 
     auto result = a - b;  // difference
     ASSERT_EQ(result.size(), 2);
-    ASSERT(result.contains(real_interval::right_open(0, 10)));
-    ASSERT(result.contains(real_interval::left_open(35, 50)));
+    ASSERT_TRUE(result.contains(real_interval::right_open(0, 10)));
+    ASSERT_TRUE(result.contains(real_interval::left_open(35, 50)));
 
     // Difference with empty
-    ASSERT_EQ(a - real_set::empty(), a);
-    ASSERT_EQ(real_set::empty() - a, real_set::empty());
+    ASSERT_EQ(a - real_set{}, a);
+    ASSERT_EQ(real_set{} - a, real_set{});
 
     // Difference with self
-    ASSERT_EQ(a - a, real_set::empty());
+    ASSERT_EQ(a - a, real_set{});
 
     // Test operator-=
     auto a_copy = a;
@@ -335,7 +278,7 @@ TEST(test_difference_operation) {
     ASSERT_EQ(a_copy, result);
 }
 
-TEST(test_symmetric_difference) {
+TEST(SetOperationTest, SymmetricDifference) {
     auto a = real_set{
         real_interval::closed(0, 10),
         real_interval::closed(20, 30)
@@ -347,19 +290,19 @@ TEST(test_symmetric_difference) {
 
     auto result = a ^ b;  // symmetric difference
     // Should contain parts of a not in b, and parts of b not in a
-    ASSERT(result.contains(3));   // in a but not b
-    ASSERT(!result.contains(7));  // in both
-    ASSERT(result.contains(12));  // in b but not a
-    ASSERT(result.contains(22));  // in a but not b
-    ASSERT(!result.contains(27)); // in both
-    ASSERT(result.contains(33));  // in b but not a
+    ASSERT_TRUE(result.contains(3));   // in a but not b
+    ASSERT_FALSE(result.contains(7));  // in both
+    ASSERT_TRUE(result.contains(12));  // in b but not a
+    ASSERT_TRUE(result.contains(22));  // in a but not b
+    ASSERT_FALSE(result.contains(27)); // in both
+    ASSERT_TRUE(result.contains(33));  // in b but not a
 
     // Symmetric difference with empty
-    ASSERT_EQ(a ^ real_set::empty(), a);
-    ASSERT_EQ(real_set::empty() ^ a, a);
+    ASSERT_EQ(a ^ real_set{}, a);
+    ASSERT_EQ(real_set{} ^ a, a);
 
     // Symmetric difference with self
-    ASSERT_EQ(a ^ a, real_set::empty());
+    ASSERT_EQ(a ^ a, real_set{});
 
     // Test operator^=
     auto a_copy = a;
@@ -367,7 +310,7 @@ TEST(test_symmetric_difference) {
     ASSERT_EQ(a_copy, result);
 }
 
-TEST(test_complement) {
+TEST(SetOperationTest, Complement) {
     auto a = real_set{
         real_interval::closed(10, 20),
         real_interval::closed(30, 40)
@@ -375,27 +318,27 @@ TEST(test_complement) {
 
     auto comp = ~a;
     // Should contain everything except [10,20] and [30,40]
-    ASSERT(comp.contains(5));
-    ASSERT(!comp.contains(15));
-    ASSERT(comp.contains(25));
-    ASSERT(!comp.contains(35));
-    ASSERT(comp.contains(45));
+    ASSERT_TRUE(comp.contains(5));
+    ASSERT_FALSE(comp.contains(15));
+    ASSERT_TRUE(comp.contains(25));
+    ASSERT_FALSE(comp.contains(35));
+    ASSERT_TRUE(comp.contains(45));
 
     // Double complement
     ASSERT_EQ(~~a, a);
 
     // Complement of empty is unbounded
-    auto comp_empty = ~real_set::empty();
-    ASSERT(comp_empty.contains(0));
-    ASSERT(comp_empty.contains(1e100));
-    ASSERT(comp_empty.contains(-1e100));
+    auto comp_empty = ~real_set{};
+    ASSERT_TRUE(comp_empty.contains(0));
+    ASSERT_TRUE(comp_empty.contains(1e100));
+    ASSERT_TRUE(comp_empty.contains(-1e100));
 }
 
 // ======================================================================
 // FLUENT INTERFACE TESTS
 // ======================================================================
 
-TEST(test_add_operations) {
+TEST(FluentInterfaceTest, AddOperations) {
     auto set = real_set{}
         .add(0, 10)
         .add(5, 15)  // overlaps, should merge
@@ -415,36 +358,33 @@ TEST(test_add_operations) {
     ASSERT_EQ(set3.size(), 5);
 }
 
-TEST(test_remove_operations) {
+TEST(FluentInterfaceTest, RemoveOperations) {
     auto set = real_set{real_interval::closed(0, 50)};
 
     // Remove interval
     auto set2 = set.remove(real_interval::closed(20, 30));
     ASSERT_EQ(set2.size(), 2);
-    ASSERT(set2.contains(10));
-    ASSERT(!set2.contains(25));
-    ASSERT(set2.contains(40));
+    ASSERT_TRUE(set2.contains(10));
+    ASSERT_FALSE(set2.contains(25));
+    ASSERT_TRUE(set2.contains(40));
 
     // Remove point interval (creates hole)
     auto set3 = set.remove(real_interval::point(25));
-    ASSERT(!set3.contains(25));
-    // Point removal may not create a precise hole due to floating point
+    ASSERT_FALSE(set3.contains(25));
 
     // Remove multiple intervals one by one
     auto set4 = set
         .remove(real_interval::closed(10, 15))
         .remove(real_interval::closed(35, 40));
-    ASSERT(!set4.contains(12));
-    ASSERT(!set4.contains(37));
+    ASSERT_FALSE(set4.contains(12));
+    ASSERT_FALSE(set4.contains(37));
 }
-
-// clear() method doesn't exist - removed this test
 
 // ======================================================================
 // MEASURE AND QUERY TESTS
 // ======================================================================
 
-TEST(test_span) {
+TEST(MeasureTest, Span) {
     auto set = real_set{
         real_interval::closed(10, 20),
         real_interval::closed(30, 40),
@@ -455,15 +395,15 @@ TEST(test_span) {
     ASSERT_EQ(span, real_interval::closed(10, 60));
 
     // Empty set has no span
-    auto empty_span = real_set::empty().span();
-    ASSERT(empty_span.is_empty());
+    auto empty_span = real_set{}.span();
+    ASSERT_TRUE(empty_span.empty());
 
     // Single interval span
     auto single = real_set{real_interval::closed(5, 15)};
     ASSERT_EQ(single.span(), real_interval::closed(5, 15));
 }
 
-TEST(test_gaps) {
+TEST(MeasureTest, Gaps) {
     auto set = real_set{
         real_interval::closed(10, 20),
         real_interval::closed(30, 40),
@@ -472,18 +412,18 @@ TEST(test_gaps) {
 
     auto gaps = set.gaps();
     ASSERT_EQ(gaps.size(), 2);
-    ASSERT(gaps.contains(real_interval::open(20, 30)));
-    ASSERT(gaps.contains(real_interval::open(40, 50)));
+    ASSERT_TRUE(gaps.contains(real_interval::open(20, 30)));
+    ASSERT_TRUE(gaps.contains(real_interval::open(40, 50)));
 
     // No gaps in continuous set
     auto continuous = real_set{real_interval::closed(0, 100)};
-    ASSERT(continuous.gaps().is_empty());
+    ASSERT_TRUE(continuous.gaps().empty());
 
     // No gaps in empty set
-    ASSERT(real_set::empty().gaps().is_empty());
+    ASSERT_TRUE(real_set{}.gaps().empty());
 }
 
-TEST(test_components) {
+TEST(MeasureTest, Components) {
     auto set = real_set{
         real_interval::closed(10, 20),
         real_interval::closed(30, 40),
@@ -500,7 +440,7 @@ TEST(test_components) {
     ASSERT_EQ(set.component_count(), 3);
 }
 
-TEST(test_measures) {
+TEST(MeasureTest, Measures) {
     auto set = real_set{
         real_interval::closed(10, 20),  // length 10
         real_interval::closed(30, 50),  // length 20
@@ -512,9 +452,9 @@ TEST(test_measures) {
     ASSERT_NEAR(set.density(), 2.0/3.0, 1e-10);  // 40/60
 
     // Empty set measures
-    ASSERT_EQ(real_set::empty().measure(), 0);
-    ASSERT_EQ(real_set::empty().gap_measure(), 0);
-    ASSERT_EQ(real_set::empty().density(), 0);
+    ASSERT_EQ(real_set{}.measure(), 0);
+    ASSERT_EQ(real_set{}.gap_measure(), 0);
+    ASSERT_EQ(real_set{}.density(), 0);
 
     // Single interval
     auto single = real_set{real_interval::closed(0, 100)};
@@ -527,7 +467,7 @@ TEST(test_measures) {
 // FUNCTIONAL INTERFACE TESTS
 // ======================================================================
 
-TEST(test_filter) {
+TEST(FunctionalTest, Filter) {
     auto set = real_set{
         real_interval::closed(1, 5),    // length 4
         real_interval::closed(10, 20),  // length 10
@@ -539,9 +479,9 @@ TEST(test_filter) {
         return i.length() >= 10;
     });
     ASSERT_EQ(filtered.size(), 2);
-    ASSERT(!filtered.contains(3));
-    ASSERT(filtered.contains(15));
-    ASSERT(filtered.contains(35));
+    ASSERT_FALSE(filtered.contains(3));
+    ASSERT_TRUE(filtered.contains(15));
+    ASSERT_TRUE(filtered.contains(35));
 
     // Filter by position
     auto left_half = set.filter([](const auto& i) {
@@ -550,7 +490,7 @@ TEST(test_filter) {
     ASSERT_EQ(left_half.size(), 2);
 }
 
-TEST(test_for_each) {
+TEST(FunctionalTest, ForEach) {
     auto set = real_set{
         real_interval::closed(1, 5),
         real_interval::closed(10, 20),
@@ -567,7 +507,7 @@ TEST(test_for_each) {
     ASSERT_EQ(count, 3);
     ASSERT_NEAR(total_length, 24, 1e-10);
 
-    // for_each_gap doesn't exist - test gaps() instead
+    // Test gaps
     auto gaps = set.gaps();
     count = 0;
     total_length = 0;
@@ -580,7 +520,7 @@ TEST(test_for_each) {
     ASSERT_NEAR(total_length, 15, 1e-10); // gaps: (5,10) and (20,30)
 }
 
-TEST(test_map) {
+TEST(FunctionalTest, Map) {
     auto set = real_set{
         real_interval::closed(1, 5),
         real_interval::closed(10, 20),
@@ -596,9 +536,9 @@ TEST(test_map) {
     });
 
     ASSERT_EQ(scaled.size(), 3);
-    ASSERT(scaled.contains(real_interval::closed(2, 10)));
-    ASSERT(scaled.contains(real_interval::closed(20, 40)));
-    ASSERT(scaled.contains(real_interval::closed(60, 80)));
+    ASSERT_TRUE(scaled.contains(real_interval::closed(2, 10)));
+    ASSERT_TRUE(scaled.contains(real_interval::closed(20, 40)));
+    ASSERT_TRUE(scaled.contains(real_interval::closed(60, 80)));
 
     // Shift all intervals
     auto shifted = set.map([](const auto& i) {
@@ -608,20 +548,16 @@ TEST(test_map) {
         );
     });
 
-    ASSERT(shifted.contains(105));
-    ASSERT(shifted.contains(115));
-    ASSERT(shifted.contains(135));
+    ASSERT_TRUE(shifted.contains(105));
+    ASSERT_TRUE(shifted.contains(115));
+    ASSERT_TRUE(shifted.contains(135));
 }
-
-// reduce() method doesn't exist - removed this test
-
-// any/all/none methods don't exist - removed this test
 
 // ======================================================================
 // ITERATOR TESTS
 // ======================================================================
 
-TEST(test_iterators) {
+TEST(IteratorTest, BasicIteration) {
     auto set = real_set{
         real_interval::closed(1, 5),
         real_interval::closed(10, 20),
@@ -632,13 +568,13 @@ TEST(test_iterators) {
     int count = 0;
     for (const auto& interval : set) {
         count++;
-        ASSERT(interval.length() > 0);
+        ASSERT_TRUE(interval.length() > 0);
     }
     ASSERT_EQ(count, 3);
 
     // Iterator operations
     auto it = set.begin();
-    ASSERT(it != set.end());
+    ASSERT_TRUE(it != set.end());
     ASSERT_EQ(*it, real_interval::closed(1, 5));
 
     ++it;
@@ -648,11 +584,11 @@ TEST(test_iterators) {
     ASSERT_EQ(*it, real_interval::closed(30, 40));
 
     ++it;
-    ASSERT(it == set.end());
+    ASSERT_TRUE(it == set.end());
 
     // Empty set iteration
     count = 0;
-    for (const auto& interval : real_set::empty()) {
+    for (const auto& interval : real_set{}) {
         count++;
     }
     ASSERT_EQ(count, 0);
@@ -662,7 +598,7 @@ TEST(test_iterators) {
 // COMPARISON TESTS
 // ======================================================================
 
-TEST(test_equality_comparison) {
+TEST(ComparisonTest, Equality) {
     auto a = real_set{
         real_interval::closed(0, 10),
         real_interval::closed(20, 30)
@@ -681,31 +617,31 @@ TEST(test_equality_comparison) {
     ASSERT_NE(b, c);
 
     // Empty sets are equal
-    ASSERT_EQ(real_set::empty(), real_set::empty());
+    ASSERT_EQ(real_set{}, real_set{});
 }
 
-TEST(test_ordering_comparison) {
+TEST(ComparisonTest, Ordering) {
     auto a = real_set{real_interval::closed(0, 10)};
     auto b = real_set{real_interval::closed(20, 30)};
     auto c = real_set{real_interval::closed(5, 15)};
 
     // Lexicographic ordering by first interval
-    ASSERT(a < b);
-    ASSERT(!(b < a));
-    ASSERT(a <= b);
-    ASSERT(b > a);
-    ASSERT(b >= a);
+    ASSERT_TRUE(a < b);
+    ASSERT_FALSE(b < a);
+    ASSERT_TRUE(a <= b);
+    ASSERT_TRUE(b > a);
+    ASSERT_TRUE(b >= a);
 
     // Overlapping intervals
-    ASSERT(a < c); // a's first interval starts before c's
+    ASSERT_TRUE(a < c); // a's first interval starts before c's
 }
 
 // ======================================================================
 // EDGE CASE TESTS
 // ======================================================================
 
-TEST(test_empty_set_operations) {
-    auto empty = real_set::empty();
+TEST(EdgeCaseTest, EmptySetOperations) {
+    auto empty = real_set{};
     auto non_empty = real_set{real_interval::closed(0, 10)};
 
     // All operations with empty set
@@ -727,7 +663,7 @@ TEST(test_empty_set_operations) {
     ASSERT_EQ(non_empty ^ empty, non_empty);
 }
 
-TEST(test_single_point_sets) {
+TEST(EdgeCaseTest, SinglePointSets) {
     auto point1 = real_set::point(5);
     auto point2 = real_set::point(10);
     auto point3 = real_set::point(5);
@@ -742,10 +678,10 @@ TEST(test_single_point_sets) {
     ASSERT_EQ(intersect_same, point1);
 
     auto intersect_diff = point1 & point2;
-    ASSERT(intersect_diff.is_empty());
+    ASSERT_TRUE(intersect_diff.empty());
 }
 
-TEST(test_adjacent_intervals_merge) {
+TEST(EdgeCaseTest, AdjacentIntervalsMerge) {
     // Adjacent closed intervals that share a point should merge
     auto set1 = real_set{
         real_interval::closed(0, 10),
@@ -762,12 +698,12 @@ TEST(test_adjacent_intervals_merge) {
     ASSERT_EQ(set2.size(), 2);
 }
 
-TEST(test_unbounded_intervals) {
+TEST(EdgeCaseTest, UnboundedIntervals) {
     auto unbounded = real_set::unbounded();
     ASSERT_EQ(unbounded.size(), 1);
-    ASSERT(unbounded.contains(0));
-    ASSERT(unbounded.contains(1e100));
-    ASSERT(unbounded.contains(-1e100));
+    ASSERT_TRUE(unbounded.contains(0));
+    ASSERT_TRUE(unbounded.contains(1e100));
+    ASSERT_TRUE(unbounded.contains(-1e100));
 
     // Operations with unbounded
     auto bounded = real_set{real_interval::closed(0, 10)};
@@ -776,10 +712,10 @@ TEST(test_unbounded_intervals) {
     ASSERT_NE(unbounded - bounded, unbounded);
 
     // Complement of unbounded is empty
-    ASSERT_EQ(~unbounded, real_set::empty());
+    ASSERT_EQ(~unbounded, real_set{});
 }
 
-TEST(test_large_number_of_intervals) {
+TEST(EdgeCaseTest, LargeNumberOfIntervals) {
     // Create set with many intervals
     std::vector<real_interval> intervals;
     for (int i = 0; i < 1000; i++) {
@@ -791,8 +727,8 @@ TEST(test_large_number_of_intervals) {
     ASSERT_EQ(large_set.component_count(), 1000);
 
     // Test contains
-    ASSERT(large_set.contains(42));    // in interval [40, 45]
-    ASSERT(!large_set.contains(47));   // in gap (45, 50)
+    ASSERT_TRUE(large_set.contains(42));    // in interval [40, 45]
+    ASSERT_FALSE(large_set.contains(47));   // in gap (45, 50)
 
     // Test measure
     ASSERT_NEAR(large_set.measure(), 5000, 1e-10);  // 1000 intervals * 5 length each
@@ -802,7 +738,7 @@ TEST(test_large_number_of_intervals) {
 // INTEGER INTERVAL SET TESTS
 // ======================================================================
 
-TEST(test_integer_sets) {
+TEST(IntegerSetTest, BasicOperations) {
     auto set = int_set{
         int_interval::closed(1, 10),
         int_interval::closed(20, 30),
@@ -810,9 +746,9 @@ TEST(test_integer_sets) {
     };
 
     ASSERT_EQ(set.size(), 3);
-    ASSERT(set.contains(5));
-    ASSERT(set.contains(25));
-    ASSERT(!set.contains(15));
+    ASSERT_TRUE(set.contains(5));
+    ASSERT_TRUE(set.contains(25));
+    ASSERT_FALSE(set.contains(15));
 
     // Integer-specific adjacent intervals
     auto adjacent_set = int_set{
@@ -824,26 +760,4 @@ TEST(test_integer_sets) {
     // Test measures with integers
     // Integer intervals [1,10], [20,30], [40,50] have lengths 9, 10, 10
     ASSERT_EQ(set.measure(), 29);  // (10-1) + (30-20) + (50-40) = 9 + 10 + 10
-}
-
-// Main test runner
-int main() {
-    std::cout << "\n================================\n";
-    std::cout << "   Comprehensive DIS Tests\n";
-    std::cout << "================================\n\n";
-
-    // Tests are automatically run by their constructors
-
-    std::cout << "\n================================\n";
-    std::cout << "Results: " << tests_passed << "/" << tests_run << " tests passed\n";
-
-    if (tests_passed == tests_run) {
-        std::cout << "All tests PASSED!\n";
-        std::cout << "================================\n";
-        return 0;
-    } else {
-        std::cout << "Some tests FAILED\n";
-        std::cout << "================================\n";
-        return 1;
-    }
 }

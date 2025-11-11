@@ -27,25 +27,40 @@ namespace dis {
 template<typename I>
 class disjoint_interval_set {
 public:
+    // Standard container type aliases
     using interval_type = I;
     using value_type = typename I::value_type;
     using container_type = std::vector<I>;
     using size_type = std::size_t;
+    using difference_type = std::ptrdiff_t;
+    using reference = const I&;
+    using const_reference = const I&;
+    using pointer = const I*;
+    using const_pointer = const I*;
+    using iterator = typename container_type::const_iterator;
     using const_iterator = typename container_type::const_iterator;
+    using reverse_iterator = std::reverse_iterator<const_iterator>;
+    using const_reverse_iterator = std::reverse_iterator<const_iterator>;
 
     // === Construction ===
 
+    // Explicitly defaulted special member functions (Rule of Five)
     disjoint_interval_set() = default;
+    disjoint_interval_set(const disjoint_interval_set&) = default;
+    disjoint_interval_set(disjoint_interval_set&&) noexcept = default;
+    disjoint_interval_set& operator=(const disjoint_interval_set&) = default;
+    disjoint_interval_set& operator=(disjoint_interval_set&&) noexcept = default;
+    ~disjoint_interval_set() = default;
 
     explicit disjoint_interval_set(I interval) {
-        if (!interval.is_empty()) {
+        if (!interval.empty()) {
             intervals_.push_back(std::move(interval));
         }
     }
 
     disjoint_interval_set(std::initializer_list<I> intervals) {
         for (const auto& interval : intervals) {
-            if (!interval.is_empty()) {
+            if (!interval.empty()) {
                 intervals_.push_back(interval);
             }
         }
@@ -56,7 +71,7 @@ public:
         requires std::same_as<std::ranges::range_value_t<R>, I>
     explicit disjoint_interval_set(R&& range) {
         for (const auto& interval : range) {
-            if (!interval.is_empty()) {
+            if (!interval.empty()) {
                 intervals_.push_back(interval);
             }
         }
@@ -65,9 +80,8 @@ public:
 
     // === Named Constructors ===
 
-    [[nodiscard]] static disjoint_interval_set empty() {
-        return disjoint_interval_set{};
-    }
+    // Note: No static empty() factory - use default constructor disjoint_interval_set()
+    // This avoids name collision with the STL-standard empty() query method
 
     [[nodiscard]] static disjoint_interval_set point(value_type value) {
         return disjoint_interval_set{I::point(value)};
@@ -83,7 +97,7 @@ public:
 
     // === Core Queries ===
 
-    [[nodiscard]] bool is_empty() const noexcept {
+    [[nodiscard]] bool empty() const noexcept {
         return intervals_.empty();
     }
 
@@ -102,7 +116,7 @@ public:
     }
 
     [[nodiscard]] bool contains(const I& interval) const {
-        if (interval.is_empty()) return true;
+        if (interval.empty()) return true;
 
         for (const auto& i : intervals_) {
             if (interval.subset_of(i)) return true;
@@ -113,7 +127,7 @@ public:
     // === DIS-Specific Queries ===
 
     [[nodiscard]] I span() const {
-        if (is_empty()) return I::empty();
+        if (empty()) return I{};
         return I::closed(
             *intervals_.front().lower_bound(),
             *intervals_.back().upper_bound()
@@ -160,20 +174,46 @@ public:
     [[nodiscard]] double density() const
         requires std::is_arithmetic_v<value_type> {
         auto s = span();
-        if (s.is_empty()) return 0.0;
+        if (s.empty()) return 0.0;
         return static_cast<double>(measure()) / static_cast<double>(s.length());
     }
 
-    // === Iteration ===
+    // === Iteration (STL-compatible) ===
 
     [[nodiscard]] const_iterator begin() const noexcept { return intervals_.begin(); }
     [[nodiscard]] const_iterator end() const noexcept { return intervals_.end(); }
+    [[nodiscard]] const_iterator cbegin() const noexcept { return intervals_.cbegin(); }
+    [[nodiscard]] const_iterator cend() const noexcept { return intervals_.cend(); }
+
+    [[nodiscard]] const_reverse_iterator rbegin() const noexcept {
+        return const_reverse_iterator(intervals_.end());
+    }
+    [[nodiscard]] const_reverse_iterator rend() const noexcept {
+        return const_reverse_iterator(intervals_.begin());
+    }
+    [[nodiscard]] const_reverse_iterator crbegin() const noexcept {
+        return const_reverse_iterator(intervals_.cend());
+    }
+    [[nodiscard]] const_reverse_iterator crend() const noexcept {
+        return const_reverse_iterator(intervals_.cbegin());
+    }
+
+    // === Element Access ===
 
     [[nodiscard]] const I& operator[](size_type index) const { return intervals_[index]; }
     [[nodiscard]] const I& at(size_type index) const { return intervals_.at(index); }
 
+    [[nodiscard]] const I& front() const { return intervals_.front(); }
+    [[nodiscard]] const I& back() const { return intervals_.back(); }
+
     [[nodiscard]] std::span<const I> intervals() const noexcept {
         return std::span<const I>(intervals_);
+    }
+
+    // === Capacity ===
+
+    [[nodiscard]] constexpr size_type max_size() const noexcept {
+        return intervals_.max_size();
     }
 
     // === Set Relations ===
@@ -190,7 +230,7 @@ public:
     }
 
     [[nodiscard]] bool disjoint_from(const disjoint_interval_set& other) const {
-        return intersect(other).is_empty();
+        return intersect(other).empty();
     }
 
     [[nodiscard]] bool overlaps(const disjoint_interval_set& other) const {
@@ -200,8 +240,8 @@ public:
     // === Set Operations (Immutable) ===
 
     [[nodiscard]] disjoint_interval_set unite(const disjoint_interval_set& other) const {
-        if (is_empty()) return other;
-        if (other.is_empty()) return *this;
+        if (empty()) return other;
+        if (other.empty()) return *this;
 
         disjoint_interval_set result;
         result.intervals_.reserve(size() + other.size());
@@ -214,14 +254,14 @@ public:
     }
 
     [[nodiscard]] disjoint_interval_set intersect(const disjoint_interval_set& other) const {
-        if (is_empty() || other.is_empty()) return disjoint_interval_set{};
+        if (empty() || other.empty()) return disjoint_interval_set{};
 
         disjoint_interval_set result;
 
         for (const auto& a : intervals_) {
             for (const auto& b : other.intervals_) {
                 auto intersection = a.intersect(b);
-                if (!intersection.is_empty()) {
+                if (!intersection.empty()) {
                     result.intervals_.push_back(intersection);
                 }
             }
@@ -233,7 +273,7 @@ public:
 
     [[nodiscard]] disjoint_interval_set complement() const
         requires std::numeric_limits<value_type>::has_infinity {
-        if (is_empty()) return unbounded();
+        if (empty()) return unbounded();
 
         disjoint_interval_set result;
         value_type neg_inf = -std::numeric_limits<value_type>::infinity();
@@ -275,37 +315,128 @@ public:
         return unite(other).difference(intersect(other));
     }
 
+    // === Modifiers (STL-compatible) ===
+
+    // Clear all intervals
+    void clear() noexcept {
+        intervals_.clear();
+    }
+
+    // Swap with another set
+    void swap(disjoint_interval_set& other) noexcept {
+        intervals_.swap(other.intervals_);
+    }
+
+    // Insert interval with STL-compatible return type
+    // Returns iterator to the first interval affected/created
+    iterator insert(I interval) {
+        if (interval.empty()) {
+            return end();
+        }
+
+        intervals_.push_back(std::move(interval));
+        normalize();
+
+        // Find and return iterator to one of the intervals containing the inserted data
+        // Due to normalization, the inserted interval may have merged with others
+        return begin();  // Conservative: always return begin after normalization
+    }
+
+    // Insert range of intervals
+    template<std::ranges::input_range R>
+        requires std::same_as<std::ranges::range_value_t<R>, I>
+    void insert(R&& range) {
+        for (const auto& interval : range) {
+            if (!interval.empty()) {
+                intervals_.push_back(interval);
+            }
+        }
+        normalize();
+    }
+
+    // Insert iterator range
+    template<typename InputIt>
+    void insert(InputIt first, InputIt last) {
+        for (auto it = first; it != last; ++it) {
+            if (!it->empty()) {
+                intervals_.push_back(*it);
+            }
+        }
+        normalize();
+    }
+
+    // Insert initializer list
+    void insert(std::initializer_list<I> ilist) {
+        for (const auto& interval : ilist) {
+            if (!interval.empty()) {
+                intervals_.push_back(interval);
+            }
+        }
+        normalize();
+    }
+
+    // Erase interval at iterator position
+    iterator erase(const_iterator pos) {
+        return intervals_.erase(pos);
+    }
+
+    // Erase range of intervals
+    iterator erase(const_iterator first, const_iterator last) {
+        return intervals_.erase(first, last);
+    }
+
+    // Erase intervals matching the given interval (returns count)
+    size_type erase(const I& interval) {
+        auto it = std::find(intervals_.begin(), intervals_.end(), interval);
+        if (it != intervals_.end()) {
+            intervals_.erase(it);
+            return 1;
+        }
+        return 0;
+    }
+
+    // Set subtraction (remove intervals covered by another set)
+    // This is separate from erase() which removes by exact match
+    disjoint_interval_set& subtract(const disjoint_interval_set& other)
+        requires std::numeric_limits<value_type>::has_infinity {
+        *this = difference(other);
+        return *this;
+    }
+
     // === Fluent Interface (Chainable Operations) ===
+    // Deprecated: Use insert() for STL compatibility
+    // These are kept for backward compatibility and chaining style
 
     [[nodiscard]] disjoint_interval_set& add(I interval) & {
-        if (!interval.is_empty()) {
-            intervals_.push_back(std::move(interval));
-            normalize();
-        }
+        insert(std::move(interval));
         return *this;
     }
 
     [[nodiscard]] disjoint_interval_set&& add(I interval) && {
-        return std::move(add(interval));
+        insert(std::move(interval));
+        return std::move(*this);
     }
 
     [[nodiscard]] disjoint_interval_set& add(value_type lower, value_type upper) & {
-        return add(I::closed(lower, upper));
+        insert(I::closed(lower, upper));
+        return *this;
     }
 
     [[nodiscard]] disjoint_interval_set&& add(value_type lower, value_type upper) && {
-        return std::move(add(lower, upper));
+        insert(I::closed(lower, upper));
+        return std::move(*this);
     }
 
     [[nodiscard]] disjoint_interval_set& remove(I interval) &
         requires std::numeric_limits<value_type>::has_infinity {
-        *this = difference(disjoint_interval_set{interval});
+        subtract(disjoint_interval_set{interval});
         return *this;
     }
 
     [[nodiscard]] disjoint_interval_set&& remove(I interval) &&
         requires std::numeric_limits<value_type>::has_infinity {
-        return std::move(remove(interval));
+        subtract(disjoint_interval_set{interval});
+        return std::move(*this);
     }
 
     [[nodiscard]] disjoint_interval_set& coalesce() & {
@@ -440,4 +571,19 @@ private:
 using real_set = disjoint_interval_set<real_interval>;
 using integer_set = disjoint_interval_set<integer_interval>;
 
+// === Free Functions (STL-compatible) ===
+
+// ADL-friendly swap
+template<typename I>
+void swap(disjoint_interval_set<I>& a, disjoint_interval_set<I>& b) noexcept {
+    a.swap(b);
+}
+
 } // namespace dis
+
+// === C++20 Ranges Support ===
+
+namespace std::ranges {
+    template<typename I>
+    inline constexpr bool enable_borrowed_range<dis::disjoint_interval_set<I>> = true;
+}

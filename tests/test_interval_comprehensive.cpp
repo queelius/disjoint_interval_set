@@ -1,70 +1,10 @@
-/**
- * Comprehensive unit tests for the interval class
- * Goal: Achieve >95% code coverage for interval.hpp
- */
-
+#include <gtest/gtest.h>
 #include "../include/dis/dis.hpp"
-#include <cassert>
-#include <iostream>
-#include <sstream>
 #include <limits>
 #include <cmath>
 #include <vector>
-#include <algorithm>
 
 using namespace dis;
-
-// Test framework
-int tests_run = 0;
-int tests_passed = 0;
-
-#define TEST(name) void name(); \
-    struct name##_runner { \
-        name##_runner() { \
-            std::cout << "Running " #name "... "; \
-            tests_run++; \
-            try { \
-                name(); \
-                std::cout << "PASSED\n"; \
-                tests_passed++; \
-            } catch (const std::exception& e) { \
-                std::cout << "FAILED: " << e.what() << '\n'; \
-            } \
-        } \
-    } name##_instance; \
-    void name()
-
-#define ASSERT(condition) \
-    if (!(condition)) { \
-        throw std::runtime_error("Assertion failed: " #condition); \
-    }
-
-#define ASSERT_EQ(a, b) \
-    if (!((a) == (b))) { \
-        std::ostringstream oss; \
-        oss << "Assertion failed: " << (a) << " != " << (b); \
-        throw std::runtime_error(oss.str()); \
-    }
-
-#define ASSERT_NE(a, b) \
-    if ((a) == (b)) { \
-        std::ostringstream oss; \
-        oss << "Assertion failed: " << (a) << " == " << (b); \
-        throw std::runtime_error(oss.str()); \
-    }
-
-#define ASSERT_NEAR(a, b, epsilon) \
-    if (std::abs((a) - (b)) > (epsilon)) { \
-        std::ostringstream oss; \
-        oss << "Assertion failed: " << (a) << " not near " << (b); \
-        throw std::runtime_error(oss.str()); \
-    }
-
-#define ASSERT_THROWS(expr) \
-    try { \
-        expr; \
-        throw std::runtime_error("Expected exception not thrown"); \
-    } catch (...) {}
 
 using real_interval = interval<double>;
 using int_interval = interval<int>;
@@ -73,304 +13,300 @@ using int_interval = interval<int>;
 // CONSTRUCTION TESTS
 // ======================================================================
 
-TEST(test_default_constructor) {
+TEST(ConstructionTest, DefaultConstructor) {
     real_interval i;
-    ASSERT(i.is_empty());
-    ASSERT(!i.contains(0));
-    ASSERT(!i.contains(1e10));
-    ASSERT(!i.contains(-1e10));
+    ASSERT_TRUE(i.empty());
+    ASSERT_FALSE(i.contains(0));
+    ASSERT_FALSE(i.contains(1e10));
+    ASSERT_FALSE(i.contains(-1e10));
 }
 
-TEST(test_generic_constructor_all_cases) {
+TEST(ConstructionTest, GenericConstructorAllCases) {
     // Normal cases
     auto closed = real_interval(1, 10, true, true);
-    ASSERT(closed.contains(1));
-    ASSERT(closed.contains(10));
-    ASSERT(closed.contains(5));
-    ASSERT(!closed.contains(0));
-    ASSERT(!closed.contains(11));
+    ASSERT_TRUE(closed.contains(1));
+    ASSERT_TRUE(closed.contains(10));
+    ASSERT_TRUE(closed.contains(5));
+    ASSERT_FALSE(closed.contains(0));
+    ASSERT_FALSE(closed.contains(11));
 
     auto open = real_interval(1, 10, false, false);
-    ASSERT(!open.contains(1));
-    ASSERT(!open.contains(10));
-    ASSERT(open.contains(5));
+    ASSERT_FALSE(open.contains(1));
+    ASSERT_FALSE(open.contains(10));
+    ASSERT_TRUE(open.contains(5));
 
     auto left_open = real_interval(1, 10, false, true);
-    ASSERT(!left_open.contains(1));
-    ASSERT(left_open.contains(10));
-    ASSERT(left_open.contains(5));
+    ASSERT_FALSE(left_open.contains(1));
+    ASSERT_TRUE(left_open.contains(10));
+    ASSERT_TRUE(left_open.contains(5));
 
     auto right_open = real_interval(1, 10, true, false);
-    ASSERT(right_open.contains(1));
-    ASSERT(!right_open.contains(10));
-    ASSERT(right_open.contains(5));
+    ASSERT_TRUE(right_open.contains(1));
+    ASSERT_FALSE(right_open.contains(10));
+    ASSERT_TRUE(right_open.contains(5));
 
     // Edge cases that should create empty intervals
     auto reverse = real_interval(10, 1); // upper < lower
-    ASSERT(reverse.is_empty());
+    ASSERT_TRUE(reverse.empty());
 
     auto open_point = real_interval(5, 5, false, false); // open interval at single point
-    ASSERT(open_point.is_empty());
+    ASSERT_TRUE(open_point.empty());
 
     auto left_open_point = real_interval(5, 5, false, true);
-    ASSERT(left_open_point.is_empty());
+    ASSERT_TRUE(left_open_point.empty());
 
     auto right_open_point = real_interval(5, 5, true, false);
-    ASSERT(right_open_point.is_empty());
+    ASSERT_TRUE(right_open_point.empty());
 }
 
-TEST(test_all_factory_methods) {
+TEST(ConstructionTest, AllFactoryMethods) {
     // closed
     auto closed = real_interval::closed(0, 10);
-    ASSERT(closed.contains(0));
-    ASSERT(closed.contains(10));
-    ASSERT(closed.contains(5));
+    ASSERT_TRUE(closed.contains(0));
+    ASSERT_TRUE(closed.contains(10));
+    ASSERT_TRUE(closed.contains(5));
 
     // open
     auto open = real_interval::open(0, 10);
-    ASSERT(!open.contains(0));
-    ASSERT(!open.contains(10));
-    ASSERT(open.contains(5));
+    ASSERT_FALSE(open.contains(0));
+    ASSERT_FALSE(open.contains(10));
+    ASSERT_TRUE(open.contains(5));
 
     // left_open
     auto left_open = real_interval::left_open(0, 10);
-    ASSERT(!left_open.contains(0));
-    ASSERT(left_open.contains(10));
+    ASSERT_FALSE(left_open.contains(0));
+    ASSERT_TRUE(left_open.contains(10));
 
     // right_open
     auto right_open = real_interval::right_open(0, 10);
-    ASSERT(right_open.contains(0));
-    ASSERT(!right_open.contains(10));
+    ASSERT_TRUE(right_open.contains(0));
+    ASSERT_FALSE(right_open.contains(10));
 
     // point
     auto point = real_interval::point(5.5);
-    ASSERT(point.contains(5.5));
-    ASSERT(!point.contains(5.49999));
-    ASSERT(!point.contains(5.50001));
-    ASSERT(point.is_point());
+    ASSERT_TRUE(point.contains(5.5));
+    ASSERT_FALSE(point.contains(5.49999));
+    ASSERT_FALSE(point.contains(5.50001));
+    ASSERT_TRUE(point.is_point());
 
     // empty
-    auto empty = real_interval::empty();
-    ASSERT(empty.is_empty());
-    ASSERT(!empty.contains(0));
+    auto empty = real_interval{};
+    ASSERT_TRUE(empty.empty());
+    ASSERT_FALSE(empty.contains(0));
 
     // unbounded
     auto unbounded = real_interval::unbounded();
-    ASSERT(unbounded.contains(0));
-    ASSERT(unbounded.contains(1e100));
-    ASSERT(unbounded.contains(-1e100));
-    ASSERT(!unbounded.is_bounded());
+    ASSERT_TRUE(unbounded.contains(0));
+    ASSERT_TRUE(unbounded.contains(1e100));
+    ASSERT_TRUE(unbounded.contains(-1e100));
+    ASSERT_FALSE(unbounded.is_bounded());
 
     // at_least
     auto at_least = real_interval::at_least(5);
-    ASSERT(at_least.contains(5));
-    ASSERT(at_least.contains(1e100));
-    ASSERT(!at_least.contains(4.99999));
+    ASSERT_TRUE(at_least.contains(5));
+    ASSERT_TRUE(at_least.contains(1e100));
+    ASSERT_FALSE(at_least.contains(4.99999));
 
     // at_most
     auto at_most = real_interval::at_most(5);
-    ASSERT(at_most.contains(5));
-    ASSERT(at_most.contains(-1e100));
-    ASSERT(!at_most.contains(5.00001));
+    ASSERT_TRUE(at_most.contains(5));
+    ASSERT_TRUE(at_most.contains(-1e100));
+    ASSERT_FALSE(at_most.contains(5.00001));
 
     // greater_than
     auto greater = real_interval::greater_than(5);
-    ASSERT(!greater.contains(5));
-    ASSERT(greater.contains(5.00001));
-    ASSERT(greater.contains(1e100));
+    ASSERT_FALSE(greater.contains(5));
+    ASSERT_TRUE(greater.contains(5.00001));
+    ASSERT_TRUE(greater.contains(1e100));
 
     // less_than
     auto less = real_interval::less_than(5);
-    ASSERT(!less.contains(5));
-    ASSERT(less.contains(4.99999));
-    ASSERT(less.contains(-1e100));
+    ASSERT_FALSE(less.contains(5));
+    ASSERT_TRUE(less.contains(4.99999));
+    ASSERT_TRUE(less.contains(-1e100));
 }
 
 // ======================================================================
 // BOUNDARY ACCESSOR TESTS
 // ======================================================================
 
-TEST(test_boundary_accessors) {
+TEST(BoundaryTest, Accessors) {
     auto closed = real_interval::closed(1, 10);
-    ASSERT(closed.lower_bound().has_value());
+    ASSERT_TRUE(closed.lower_bound().has_value());
     ASSERT_EQ(*closed.lower_bound(), 1);
-    ASSERT(closed.upper_bound().has_value());
+    ASSERT_TRUE(closed.upper_bound().has_value());
     ASSERT_EQ(*closed.upper_bound(), 10);
-    ASSERT(closed.is_left_closed());
-    ASSERT(closed.is_right_closed());
+    ASSERT_TRUE(closed.is_left_closed());
+    ASSERT_TRUE(closed.is_right_closed());
 
     auto open = real_interval::open(1, 10);
-    ASSERT(!open.is_left_closed());
-    ASSERT(!open.is_right_closed());
+    ASSERT_FALSE(open.is_left_closed());
+    ASSERT_FALSE(open.is_right_closed());
 
-    auto empty = real_interval::empty();
+    auto empty = real_interval{};
     // Empty intervals should not have bounds
-    ASSERT(!empty.lower_bound().has_value());
-    ASSERT(!empty.upper_bound().has_value());
+    ASSERT_FALSE(empty.lower_bound().has_value());
+    ASSERT_FALSE(empty.upper_bound().has_value());
 
     auto unbounded = real_interval::unbounded();
     // Unbounded interval has infinite bounds
-    ASSERT(unbounded.lower_bound().has_value());
-    ASSERT(unbounded.upper_bound().has_value());
-    ASSERT(std::isinf(*unbounded.lower_bound()));
-    ASSERT(std::isinf(*unbounded.upper_bound()));
+    ASSERT_TRUE(unbounded.lower_bound().has_value());
+    ASSERT_TRUE(unbounded.upper_bound().has_value());
+    ASSERT_TRUE(std::isinf(*unbounded.lower_bound()));
+    ASSERT_TRUE(std::isinf(*unbounded.upper_bound()));
 }
 
 // ======================================================================
 // QUERY METHOD TESTS
 // ======================================================================
 
-TEST(test_interval_queries) {
+TEST(QueryTest, IntervalQueries) {
     // is_empty
-    ASSERT(real_interval::empty().is_empty());
-    ASSERT(!real_interval::closed(0, 10).is_empty());
-    ASSERT(real_interval(10, 5).is_empty()); // reversed bounds
+    ASSERT_TRUE(real_interval{}.empty());
+    ASSERT_FALSE(real_interval::closed(0, 10).empty());
+    ASSERT_TRUE(real_interval(10, 5).empty()); // reversed bounds
 
     // is_point
-    ASSERT(real_interval::point(5).is_point());
-    ASSERT(!real_interval::closed(5, 5.001).is_point());
-    ASSERT(!real_interval::empty().is_point());
+    ASSERT_TRUE(real_interval::point(5).is_point());
+    ASSERT_FALSE(real_interval::closed(5, 5.001).is_point());
+    ASSERT_FALSE(real_interval{}.is_point());
 
     // is_bounded
-    ASSERT(real_interval::closed(0, 10).is_bounded());
-    ASSERT(!real_interval::unbounded().is_bounded());
-    ASSERT(!real_interval::at_least(5).is_bounded());
-    ASSERT(!real_interval::at_most(5).is_bounded());
-    ASSERT(!real_interval::empty().is_bounded()); // empty is NOT considered bounded
+    ASSERT_TRUE(real_interval::closed(0, 10).is_bounded());
+    ASSERT_FALSE(real_interval::unbounded().is_bounded());
+    ASSERT_FALSE(real_interval::at_least(5).is_bounded());
+    ASSERT_FALSE(real_interval::at_most(5).is_bounded());
+    ASSERT_FALSE(real_interval{}.is_bounded()); // empty is NOT considered bounded
 
     // Verify unbounded intervals through their bounds
     auto less = real_interval::less_than(10);
-    ASSERT(less.lower_bound().has_value());
-    ASSERT(std::isinf(*less.lower_bound()));
+    ASSERT_TRUE(less.lower_bound().has_value());
+    ASSERT_TRUE(std::isinf(*less.lower_bound()));
 
     auto greater = real_interval::greater_than(0);
-    ASSERT(greater.upper_bound().has_value());
-    ASSERT(std::isinf(*greater.upper_bound()));
+    ASSERT_TRUE(greater.upper_bound().has_value());
+    ASSERT_TRUE(std::isinf(*greater.upper_bound()));
 }
 
 // ======================================================================
 // CONTAINMENT TESTS
 // ======================================================================
 
-TEST(test_value_containment) {
+TEST(ContainmentTest, ValueContainment) {
     auto closed = real_interval::closed(0, 10);
-    ASSERT(closed.contains(0));
-    ASSERT(closed.contains(5));
-    ASSERT(closed.contains(10));
-    ASSERT(!closed.contains(-1));
-    ASSERT(!closed.contains(11));
+    ASSERT_TRUE(closed.contains(0));
+    ASSERT_TRUE(closed.contains(5));
+    ASSERT_TRUE(closed.contains(10));
+    ASSERT_FALSE(closed.contains(-1));
+    ASSERT_FALSE(closed.contains(11));
 
     auto open = real_interval::open(0, 10);
-    ASSERT(!open.contains(0));
-    ASSERT(open.contains(5));
-    ASSERT(!open.contains(10));
+    ASSERT_FALSE(open.contains(0));
+    ASSERT_TRUE(open.contains(5));
+    ASSERT_FALSE(open.contains(10));
 
-    auto empty = real_interval::empty();
-    ASSERT(!empty.contains(0));
-    ASSERT(!empty.contains(std::numeric_limits<double>::infinity()));
-    ASSERT(!empty.contains(-std::numeric_limits<double>::infinity()));
+    auto empty = real_interval{};
+    ASSERT_FALSE(empty.contains(0));
+    ASSERT_FALSE(empty.contains(std::numeric_limits<double>::infinity()));
+    ASSERT_FALSE(empty.contains(-std::numeric_limits<double>::infinity()));
 }
 
-TEST(test_interval_containment) {
+TEST(ContainmentTest, IntervalContainment) {
     auto large = real_interval::closed(0, 100);
     auto small = real_interval::closed(25, 75);
     auto overlapping = real_interval::closed(50, 150);
     auto disjoint = real_interval::closed(200, 300);
 
     // Use subset_of to check interval containment
-    ASSERT(small.subset_of(large));
-    ASSERT(!overlapping.subset_of(large));
-    ASSERT(!disjoint.subset_of(large));
-    ASSERT(!large.subset_of(small));
+    ASSERT_TRUE(small.subset_of(large));
+    ASSERT_FALSE(overlapping.subset_of(large));
+    ASSERT_FALSE(disjoint.subset_of(large));
+    ASSERT_FALSE(large.subset_of(small));
 
     // Empty interval tests
-    ASSERT(real_interval::empty().subset_of(large));
-    ASSERT(!large.subset_of(real_interval::empty()));
-    ASSERT(real_interval::empty().subset_of(real_interval::empty()));
+    ASSERT_TRUE(real_interval{}.subset_of(large));
+    ASSERT_FALSE(large.subset_of(real_interval{}));
+    ASSERT_TRUE(real_interval{}.subset_of(real_interval{}));
 }
 
 // ======================================================================
 // RELATIONAL OPERATION TESTS
 // ======================================================================
 
-TEST(test_subset_superset) {
+TEST(RelationTest, SubsetSuperset) {
     auto a = real_interval::closed(0, 100);
     auto b = real_interval::closed(25, 75);
     auto c = real_interval::closed(50, 150);
 
-    ASSERT(b.subset_of(a));
-    ASSERT(!a.subset_of(b));
-    ASSERT(!c.subset_of(a));
+    ASSERT_TRUE(b.subset_of(a));
+    ASSERT_FALSE(a.subset_of(b));
+    ASSERT_FALSE(c.subset_of(a));
 
-    ASSERT(a.superset_of(b));
-    ASSERT(!b.superset_of(a));
-    ASSERT(!a.superset_of(c));
+    ASSERT_TRUE(a.superset_of(b));
+    ASSERT_FALSE(b.superset_of(a));
+    ASSERT_FALSE(a.superset_of(c));
 
     // Empty interval is subset of everything
-    ASSERT(real_interval::empty().subset_of(a));
-    ASSERT(a.superset_of(real_interval::empty()));
+    ASSERT_TRUE(real_interval{}.subset_of(a));
+    ASSERT_TRUE(a.superset_of(real_interval{}));
 
     // Self-subset
-    ASSERT(a.subset_of(a));
-    ASSERT(a.superset_of(a));
+    ASSERT_TRUE(a.subset_of(a));
+    ASSERT_TRUE(a.superset_of(a));
 }
 
-TEST(test_overlaps_disjoint) {
+TEST(RelationTest, OverlapsDisjoint) {
     auto a = real_interval::closed(0, 50);
     auto b = real_interval::closed(25, 75);
     auto c = real_interval::closed(100, 150);
 
-    ASSERT(a.overlaps(b));
-    ASSERT(b.overlaps(a));
-    ASSERT(!a.overlaps(c));
-    ASSERT(!c.overlaps(a));
+    ASSERT_TRUE(a.overlaps(b));
+    ASSERT_TRUE(b.overlaps(a));
+    ASSERT_FALSE(a.overlaps(c));
+    ASSERT_FALSE(c.overlaps(a));
 
-    ASSERT(!a.disjoint_from(b));
-    ASSERT(!b.disjoint_from(a));
-    ASSERT(a.disjoint_from(c));
-    ASSERT(c.disjoint_from(a));
+    ASSERT_FALSE(a.disjoint_from(b));
+    ASSERT_FALSE(b.disjoint_from(a));
+    ASSERT_TRUE(a.disjoint_from(c));
+    ASSERT_TRUE(c.disjoint_from(a));
 
     // Empty interval tests
-    ASSERT(!a.overlaps(real_interval::empty()));
-    ASSERT(a.disjoint_from(real_interval::empty()));
+    ASSERT_FALSE(a.overlaps(real_interval{}));
+    ASSERT_TRUE(a.disjoint_from(real_interval{}));
 }
 
-TEST(test_adjacent_intervals) {
+TEST(RelationTest, AdjacentIntervals) {
     auto a = real_interval::closed(0, 10);
     auto b = real_interval::closed(10, 20);
     auto c = real_interval::open(10, 20);
     auto d = real_interval::closed(11, 20);
 
     // [0,10] and [10,20] share boundary point 10
-    ASSERT(!a.adjacent_to(b)); // They overlap at 10
+    ASSERT_FALSE(a.adjacent_to(b)); // They overlap at 10
 
     // [0,10] and (10,20) are adjacent
-    ASSERT(a.adjacent_to(c));
-    ASSERT(c.adjacent_to(a));
+    ASSERT_TRUE(a.adjacent_to(c));
+    ASSERT_TRUE(c.adjacent_to(a));
 
     // [0,10] and [11,20] are not adjacent (gap between)
-    ASSERT(!a.adjacent_to(d));
+    ASSERT_FALSE(a.adjacent_to(d));
 
     // Test with open intervals
     auto e = real_interval::open(0, 10);
     auto f = real_interval::closed(10, 20);
-    ASSERT(e.adjacent_to(f));
+    ASSERT_TRUE(e.adjacent_to(f));
 
     // Test integer intervals for clarity
     auto int_a = int_interval::closed(0, 10);
     auto int_b = int_interval::closed(11, 20);
-    ASSERT(!int_a.adjacent_to(int_b)); // NOT adjacent - there's no shared boundary point
+    ASSERT_FALSE(int_a.adjacent_to(int_b)); // NOT adjacent - there's no shared boundary point
 }
-
-// touches() method doesn't exist - removed this test
-
-// before/after methods don't exist - removed this test
 
 // ======================================================================
 // SET OPERATION TESTS
 // ======================================================================
 
-TEST(test_intersection) {
+TEST(SetOperationTest, Intersection) {
     auto a = real_interval::closed(0, 10);
     auto b = real_interval::closed(5, 15);
     auto c = real_interval::closed(20, 30);
@@ -379,7 +315,7 @@ TEST(test_intersection) {
     ASSERT_EQ(ab, real_interval::closed(5, 10));
 
     auto ac = a.intersect(c);
-    ASSERT(ac.is_empty());
+    ASSERT_TRUE(ac.empty());
 
     // Test with different boundary types
     auto d = real_interval::open(0, 10);
@@ -388,52 +324,51 @@ TEST(test_intersection) {
     ASSERT_EQ(de, real_interval::right_open(5, 10));
 
     // Empty interval intersection
-    auto empty = real_interval::empty();
+    auto empty = real_interval{};
     ASSERT_EQ(a.intersect(empty), empty);
 }
 
-TEST(test_hull) {
+TEST(SetOperationTest, Hull) {
     auto a = real_interval::closed(0, 10);
     auto b = real_interval::closed(5, 15);
     auto c = real_interval::closed(20, 30);
 
     auto ab_hull = a.hull(b);
-    ASSERT(ab_hull.has_value());
+    ASSERT_TRUE(ab_hull.has_value());
     ASSERT_EQ(*ab_hull, real_interval::closed(0, 15));
 
     auto ac_hull = a.hull(c);
-    ASSERT(!ac_hull.has_value()); // hull only works for overlapping or adjacent intervals
+    ASSERT_FALSE(ac_hull.has_value()); // hull only works for overlapping or adjacent intervals
 
     // Hull with empty interval
-    auto empty = real_interval::empty();
+    auto empty = real_interval{};
     auto a_empty_hull = a.hull(empty);
-    ASSERT(a_empty_hull.has_value());
+    ASSERT_TRUE(a_empty_hull.has_value());
     ASSERT_EQ(*a_empty_hull, a);
 
     auto empty_empty_hull = empty.hull(empty);
-    ASSERT(empty_empty_hull.has_value()); // hull of two empties returns empty
-    ASSERT(empty_empty_hull->is_empty());
+    ASSERT_TRUE(empty_empty_hull.has_value()); // hull of two empties returns empty
+    ASSERT_TRUE(empty_empty_hull->empty());
 }
 
-// join() method doesn't exist - using hull() which is similar
-TEST(test_join_via_hull) {
+TEST(SetOperationTest, JoinViaHull) {
     auto a = real_interval::closed(0, 10);
     auto b = real_interval::closed(10, 20); // touching
     auto d = real_interval::closed(30, 40); // disjoint
 
     auto ab_hull = a.hull(b);
-    ASSERT(ab_hull.has_value());
+    ASSERT_TRUE(ab_hull.has_value());
     ASSERT_EQ(*ab_hull, real_interval::closed(0, 20));
 
     auto ad_hull = a.hull(d);
-    ASSERT(!ad_hull.has_value()); // can't create hull of disjoint intervals
+    ASSERT_FALSE(ad_hull.has_value()); // can't create hull of disjoint intervals
 }
 
 // ======================================================================
 // COMPARISON TESTS
 // ======================================================================
 
-TEST(test_equality) {
+TEST(ComparisonTest, Equality) {
     auto a = real_interval::closed(0, 10);
     auto b = real_interval::closed(0, 10);
     auto c = real_interval::open(0, 10);
@@ -444,31 +379,31 @@ TEST(test_equality) {
     ASSERT_NE(a, d);
 
     // Empty intervals are equal
-    ASSERT_EQ(real_interval::empty(), real_interval::empty());
-    ASSERT_EQ(real_interval(10, 5), real_interval::empty());
+    ASSERT_EQ(real_interval{}, real_interval{});
+    ASSERT_EQ(real_interval(10, 5), real_interval{});
 }
 
-TEST(test_ordering) {
+TEST(ComparisonTest, Ordering) {
     auto a = real_interval::closed(0, 10);
     auto b = real_interval::closed(5, 15);
     auto c = real_interval::closed(20, 30);
 
-    ASSERT(a < c); // a is entirely before c
-    ASSERT(!(c < a));
-    ASSERT(a <= a);
-    ASSERT(c > a);
-    ASSERT(c >= c);
+    ASSERT_TRUE(a < c); // a is entirely before c
+    ASSERT_FALSE(c < a);
+    ASSERT_TRUE(a <= a);
+    ASSERT_TRUE(c > a);
+    ASSERT_TRUE(c >= c);
 
     // Overlapping intervals
     // Ordering is lexicographic: first by lower bound, then upper
-    ASSERT(a < b); // same lower, but a has smaller upper
+    ASSERT_TRUE(a < b); // same lower, but a has smaller upper
 }
 
 // ======================================================================
 // MEASURE TESTS
 // ======================================================================
 
-TEST(test_length) {
+TEST(MeasureTest, Length) {
     auto a = real_interval::closed(2, 8);
     ASSERT_NEAR(a.length(), 6, 1e-10);
 
@@ -478,7 +413,7 @@ TEST(test_length) {
     auto point = real_interval::point(5);
     ASSERT_NEAR(point.length(), 0, 1e-10);
 
-    auto empty = real_interval::empty();
+    auto empty = real_interval{};
     ASSERT_NEAR(empty.length(), 0, 1e-10);
 
     // Integer intervals
@@ -486,7 +421,7 @@ TEST(test_length) {
     ASSERT_EQ(int_interval.length(), 9);
 }
 
-TEST(test_midpoint) {
+TEST(MeasureTest, Midpoint) {
     auto a = real_interval::closed(2, 8);
     ASSERT_NEAR(a.midpoint(), 5, 1e-10);
 
@@ -497,7 +432,7 @@ TEST(test_midpoint) {
     ASSERT_NEAR(point.midpoint(), 7, 1e-10);
 }
 
-TEST(test_distance) {
+TEST(MeasureTest, Distance) {
     auto a = real_interval::closed(0, 10);
     auto b = real_interval::closed(20, 30);
     auto c = real_interval::closed(5, 15);
@@ -511,44 +446,38 @@ TEST(test_distance) {
     ASSERT_NEAR(a.distance_to(point), 15, 1e-10);
 
     // Distance involving empty
-    auto empty = real_interval::empty();
+    auto empty = real_interval{};
     ASSERT_EQ(a.distance_to(empty), 0); // distance to empty is 0 per implementation
 }
-
-// Transformation methods (expand, contract, shift, scale, clamp) don't exist in the API
-
-// Iterator methods don't exist in the API
-
-// Split methods don't exist in the API
 
 // ======================================================================
 // SPECIAL VALUE TESTS
 // ======================================================================
 
-TEST(test_infinity_handling) {
+TEST(SpecialValueTest, InfinityHandling) {
     auto inf = std::numeric_limits<double>::infinity();
     auto ninf = -inf;
 
     auto unbounded = real_interval::unbounded();
     // Unbounded has infinite bounds but they're open, so doesn't contain infinity itself
-    ASSERT(!unbounded.contains(inf));
-    ASSERT(!unbounded.contains(ninf));
-    ASSERT(unbounded.contains(0));
+    ASSERT_FALSE(unbounded.contains(inf));
+    ASSERT_FALSE(unbounded.contains(ninf));
+    ASSERT_TRUE(unbounded.contains(0));
 
     auto at_least = real_interval::at_least(0);
-    ASSERT(!at_least.contains(inf)); // open at infinity
-    ASSERT(!at_least.contains(ninf));
+    ASSERT_FALSE(at_least.contains(inf)); // open at infinity
+    ASSERT_FALSE(at_least.contains(ninf));
 
     auto at_most = real_interval::at_most(0);
-    ASSERT(!at_most.contains(inf));
-    ASSERT(!at_most.contains(ninf)); // open at negative infinity
+    ASSERT_FALSE(at_most.contains(inf));
+    ASSERT_FALSE(at_most.contains(ninf)); // open at negative infinity
 }
 
-TEST(test_nan_handling) {
+TEST(SpecialValueTest, NaNHandling) {
     auto nan = std::numeric_limits<double>::quiet_NaN();
 
     auto a = real_interval::closed(0, 10);
-    ASSERT(!a.contains(nan)); // NaN is never contained
+    ASSERT_FALSE(a.contains(nan)); // NaN is never contained
 
     // NaN handling is implementation-specific
     // The interval constructor may not detect NaN as invalid
@@ -560,60 +489,38 @@ TEST(test_nan_handling) {
 // EDGE CASE TESTS
 // ======================================================================
 
-TEST(test_extreme_values) {
+TEST(EdgeCaseTest, ExtremeValues) {
     auto max_val = std::numeric_limits<double>::max();
     auto min_val = std::numeric_limits<double>::lowest();
     auto epsilon = std::numeric_limits<double>::epsilon();
 
     auto extreme = real_interval::closed(min_val, max_val);
-    ASSERT(extreme.contains(0));
-    ASSERT(extreme.contains(max_val));
-    ASSERT(extreme.contains(min_val));
+    ASSERT_TRUE(extreme.contains(0));
+    ASSERT_TRUE(extreme.contains(max_val));
+    ASSERT_TRUE(extreme.contains(min_val));
 
     // Very small interval
     auto tiny = real_interval::closed(0, epsilon);
-    ASSERT(tiny.contains(0));
-    ASSERT(tiny.contains(epsilon));
-    ASSERT(!tiny.contains(2 * epsilon));
+    ASSERT_TRUE(tiny.contains(0));
+    ASSERT_TRUE(tiny.contains(epsilon));
+    ASSERT_FALSE(tiny.contains(2 * epsilon));
     ASSERT_NEAR(tiny.length(), epsilon, epsilon/10);
 }
 
-TEST(test_integer_boundary_cases) {
+TEST(EdgeCaseTest, IntegerBoundaryCases) {
     auto max_int = std::numeric_limits<int>::max();
     auto min_int = std::numeric_limits<int>::min();
 
     auto full_range = int_interval::closed(min_int, max_int);
-    ASSERT(full_range.contains(0));
-    ASSERT(full_range.contains(max_int));
-    ASSERT(full_range.contains(min_int));
+    ASSERT_TRUE(full_range.contains(0));
+    ASSERT_TRUE(full_range.contains(max_int));
+    ASSERT_TRUE(full_range.contains(min_int));
 
     // Adjacent integer intervals - need shared boundary point
     auto a = int_interval::closed(0, 10);
     auto b = int_interval::open(10, 20);
-    ASSERT(a.adjacent_to(b)); // [0,10] is adjacent to (10,20)
+    ASSERT_TRUE(a.adjacent_to(b)); // [0,10] is adjacent to (10,20)
 
     auto c = int_interval::closed(10, 20);
-    ASSERT(!a.adjacent_to(c)); // they overlap at 10
-}
-
-// Main test runner
-int main() {
-    std::cout << "\n================================\n";
-    std::cout << "   Comprehensive Interval Tests\n";
-    std::cout << "================================\n\n";
-
-    // Tests are automatically run by their constructors
-
-    std::cout << "\n================================\n";
-    std::cout << "Results: " << tests_passed << "/" << tests_run << " tests passed\n";
-
-    if (tests_passed == tests_run) {
-        std::cout << "All tests PASSED!\n";
-        std::cout << "================================\n";
-        return 0;
-    } else {
-        std::cout << "Some tests FAILED\n";
-        std::cout << "================================\n";
-        return 1;
-    }
+    ASSERT_FALSE(a.adjacent_to(c)); // they overlap at 10
 }

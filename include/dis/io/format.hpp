@@ -31,7 +31,7 @@ public:
 
     // Format a single interval
     [[nodiscard]] static std::string format(const interval<T>& i, Style style = Style::Mathematical) {
-        if (i.is_empty()) {
+        if (i.empty()) {
             switch (style) {
                 case Style::Unicode: return "∅";
                 case Style::LaTeX: return "\\emptyset";
@@ -92,7 +92,7 @@ public:
     // Format a disjoint interval set
     [[nodiscard]] static std::string format(const disjoint_interval_set<interval<T>>& set,
                                            Style style = Style::Mathematical) {
-        if (set.is_empty()) {
+        if (set.empty()) {
             switch (style) {
                 case Style::Unicode: return "∅";
                 case Style::LaTeX: return "\\emptyset";

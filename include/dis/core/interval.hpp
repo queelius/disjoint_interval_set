@@ -29,7 +29,9 @@ concept Boundary = std::totally_ordered<T> && std::regular<T>;
 template<Boundary T>
 class interval {
 public:
+    // Standard library-compatible type aliases
     using value_type = T;
+    using difference_type = std::ptrdiff_t;
 
     // === Construction ===
 
@@ -71,9 +73,8 @@ public:
         return interval(value, value, true, true);
     }
 
-    [[nodiscard]] static constexpr interval empty() noexcept {
-        return interval();
-    }
+    // Note: No static empty() factory - use default constructor interval()
+    // This avoids name collision with the STL-standard empty() query method
 
     [[nodiscard]] static constexpr interval unbounded() noexcept
         requires std::numeric_limits<T>::has_infinity {
@@ -103,54 +104,54 @@ public:
 
     // === Core Queries ===
 
-    [[nodiscard]] constexpr bool is_empty() const noexcept {
+    [[nodiscard]] constexpr bool empty() const noexcept {
         return lower_ > upper_;
     }
 
     [[nodiscard]] constexpr bool contains(T value) const noexcept {
-        if (is_empty()) return false;
+        if (empty()) return false;
         const bool left_ok = left_closed_ ? (value >= lower_) : (value > lower_);
         const bool right_ok = right_closed_ ? (value <= upper_) : (value < upper_);
         return left_ok && right_ok;
     }
 
     [[nodiscard]] constexpr bool is_point() const noexcept {
-        return !is_empty() && lower_ == upper_ && left_closed_ && right_closed_;
+        return !empty() && lower_ == upper_ && left_closed_ && right_closed_;
     }
 
     [[nodiscard]] constexpr bool is_bounded() const noexcept {
         if constexpr (std::numeric_limits<T>::has_infinity) {
-            return !is_empty() &&
+            return !empty() &&
                    lower_ != -std::numeric_limits<T>::infinity() &&
                    upper_ != std::numeric_limits<T>::infinity();
         } else {
-            return !is_empty();
+            return !empty();
         }
     }
 
     // === Boundary Access ===
 
     [[nodiscard]] constexpr std::optional<T> lower_bound() const noexcept {
-        return is_empty() ? std::nullopt : std::optional<T>(lower_);
+        return empty() ? std::nullopt : std::optional<T>(lower_);
     }
 
     [[nodiscard]] constexpr std::optional<T> upper_bound() const noexcept {
-        return is_empty() ? std::nullopt : std::optional<T>(upper_);
+        return empty() ? std::nullopt : std::optional<T>(upper_);
     }
 
     [[nodiscard]] constexpr bool is_left_closed() const noexcept {
-        return !is_empty() && left_closed_;
+        return !empty() && left_closed_;
     }
 
     [[nodiscard]] constexpr bool is_right_closed() const noexcept {
-        return !is_empty() && right_closed_;
+        return !empty() && right_closed_;
     }
 
     // === Set Relations ===
 
     [[nodiscard]] constexpr bool subset_of(const interval& other) const noexcept {
-        if (is_empty()) return true;
-        if (other.is_empty()) return false;
+        if (empty()) return true;
+        if (other.empty()) return false;
 
         const bool left_ok = (other.lower_ < lower_) ||
             (other.lower_ == lower_ && (!other.left_closed_ || left_closed_));
@@ -165,7 +166,7 @@ public:
     }
 
     [[nodiscard]] constexpr bool overlaps(const interval& other) const noexcept {
-        if (is_empty() || other.is_empty()) return false;
+        if (empty() || other.empty()) return false;
 
         if (upper_ < other.lower_) return false;
         if (lower_ > other.upper_) return false;
@@ -180,7 +181,7 @@ public:
     }
 
     [[nodiscard]] constexpr bool adjacent_to(const interval& other) const noexcept {
-        if (is_empty() || other.is_empty()) return false;
+        if (empty() || other.empty()) return false;
 
         if (upper_ == other.lower_) return right_closed_ != other.left_closed_;
         if (lower_ == other.upper_) return left_closed_ != other.right_closed_;
@@ -191,12 +192,12 @@ public:
     // === Set Operations ===
 
     [[nodiscard]] constexpr interval intersect(const interval& other) const noexcept {
-        if (is_empty() || other.is_empty()) return empty();
+        if (empty() || other.empty()) return interval{};
 
         const T new_lower = std::max(lower_, other.lower_);
         const T new_upper = std::min(upper_, other.upper_);
 
-        if (new_lower > new_upper) return empty();
+        if (new_lower > new_upper) return interval{};
 
         const bool new_left = (lower_ == other.lower_)
             ? (left_closed_ && other.left_closed_)
@@ -206,14 +207,14 @@ public:
             ? (right_closed_ && other.right_closed_)
             : (new_upper == upper_ ? right_closed_ : other.right_closed_);
 
-        if (new_lower == new_upper && (!new_left || !new_right)) return empty();
+        if (new_lower == new_upper && (!new_left || !new_right)) return interval{};
 
         return interval(new_lower, new_upper, new_left, new_right);
     }
 
     [[nodiscard]] constexpr std::optional<interval> hull(const interval& other) const noexcept {
-        if (is_empty()) return other;
-        if (other.is_empty()) return *this;
+        if (empty()) return other;
+        if (other.empty()) return *this;
 
         // Can only create hull if intervals overlap or are adjacent
         if (!overlaps(other) && !adjacent_to(other)) {
@@ -238,17 +239,17 @@ public:
 
     [[nodiscard]] constexpr T length() const noexcept
         requires std::is_arithmetic_v<T> {
-        return is_empty() ? T(0) : (upper_ - lower_);
+        return empty() ? T(0) : (upper_ - lower_);
     }
 
     [[nodiscard]] constexpr T midpoint() const noexcept
         requires std::is_arithmetic_v<T> {
-        return is_empty() ? T(0) : lower_ + length() / T(2);
+        return empty() ? T(0) : lower_ + length() / T(2);
     }
 
     [[nodiscard]] constexpr T distance_to(const interval& other) const noexcept
         requires std::is_arithmetic_v<T> {
-        if (is_empty() || other.is_empty()) return T(0);
+        if (empty() || other.empty()) return T(0);
         if (overlaps(other)) return T(0);
 
         if (upper_ < other.lower_) {
@@ -261,27 +262,29 @@ public:
     // === Comparison Operators ===
 
     [[nodiscard]] friend constexpr bool operator==(const interval& a, const interval& b) noexcept {
-        if (a.is_empty() && b.is_empty()) return true;
+        if (a.empty() && b.empty()) return true;
         return a.lower_ == b.lower_ && a.upper_ == b.upper_ &&
                a.left_closed_ == b.left_closed_ && a.right_closed_ == b.right_closed_;
     }
 
-    [[nodiscard]] friend constexpr auto operator<=>(const interval& a, const interval& b) noexcept
-        -> std::partial_ordering {
+    [[nodiscard]] friend constexpr auto operator<=>(const interval& a, const interval& b) noexcept {
         // Lexicographic ordering for use in containers
-        if (a.is_empty() && b.is_empty()) return std::partial_ordering::equivalent;
-        if (a.is_empty()) return std::partial_ordering::less;
-        if (b.is_empty()) return std::partial_ordering::greater;
+        // Use the ordering category of the underlying type T
+        using ordering = std::compare_three_way_result_t<T>;
+
+        if (a.empty() && b.empty()) return ordering::equivalent;
+        if (a.empty()) return ordering::less;
+        if (b.empty()) return ordering::greater;
 
         if (auto cmp = a.lower_ <=> b.lower_; cmp != 0) return cmp;
         if (a.left_closed_ != b.left_closed_) {
-            return a.left_closed_ ? std::partial_ordering::less : std::partial_ordering::greater;
+            return a.left_closed_ ? ordering::less : ordering::greater;
         }
         if (auto cmp = a.upper_ <=> b.upper_; cmp != 0) return cmp;
         if (a.right_closed_ != b.right_closed_) {
-            return a.right_closed_ ? std::partial_ordering::less : std::partial_ordering::greater;
+            return a.right_closed_ ? ordering::less : ordering::greater;
         }
-        return std::partial_ordering::equivalent;
+        return ordering::equivalent;
     }
 
     // === Mathematical Operator Overloads ===

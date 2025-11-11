@@ -44,7 +44,7 @@ public:
         str = trim(str);
 
         if (str.empty() || str == "{}" || str == "∅") {
-            return interval_type::empty();
+            return interval_type{};  // Default constructor creates empty interval
         }
 
         // Handle singleton {value}
@@ -85,7 +85,7 @@ public:
         str = trim(str);
 
         if (str.empty() || str == "{}" || str == "∅") {
-            return set_type::empty();
+            return set_type{};  // Default constructor creates empty set
         }
 
         // Handle complex expressions with operations

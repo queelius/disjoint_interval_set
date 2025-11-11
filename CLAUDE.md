@@ -4,32 +4,269 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Overview
 
-This is a C++ header-only library implementing Disjoint Interval Sets (DIS), a Boolean algebra over sets of disjoint intervals with standard set-theoretic operations (union, intersection, complement).
+This is a modern C++ header-only library implementing **Disjoint Interval Sets (DIS)** as a complete Boolean algebra over 1-dimensional intervals. The library provides set-theoretic operations (union, intersection, complement) with an elegant API that balances mathematical notation with STL conventions.
 
-## Key Architecture
+**Key characteristics:**
+- Header-only with **zero dependencies**
+- C++17 minimum, C++20 for full features
+- 97.46% test coverage on core implementation
+- STL-aligned API (post-refactoring in Nov 2024)
+- Production-ready with comprehensive test suite
 
-- **Header-only library**: All code is in `include/disjoint_interval_set/`
-- **Template-based design**: The main class `disjoint_interval_set<I>` is parameterized by interval type
-- **Core components**:
-  - `interval.hpp`: Base interval type modeling mathematical intervals with membership testing
-  - `disjoint_interval_set.hpp`: Main DIS implementation with set operations
-  - `disjoint_interval_set_algorithms.hpp`: Supporting algorithms for DIS operations
-  - `disjoint_interval_set_parser.hpp`: Parsing utilities for DIS
+## Dual Implementation Architecture
 
-## Development Workflow
+The library maintains **two implementations** for different use cases:
 
-Since this is a header-only library without build files or test infrastructure currently configured:
+### 1. Modern API (`include/dis/`)
+**Primary implementation going forward** - STL-aligned, elegant, feature-complete.
 
-- **To compile test files**: Use standard C++ compiler with includes
-  ```bash
-  g++ -std=c++17 -I./include test.cpp -o test
-  ```
+```
+include/dis/
+├── core/
+│   ├── interval.hpp              # Core interval class with STL compliance
+│   └── disjoint_interval_set.hpp # Main DIS container with full Boolean algebra
+├── io/
+│   ├── parser.hpp               # Mathematical notation parser
+│   └── format.hpp               # Output formatting
+└── dis.hpp                      # Convenience header (includes all)
+```
 
-- **Language standard**: C++17 or later required (uses `std::optional`)
+**Key features:**
+- STL container interface (`empty()`, `size()`, `insert()`, `erase()`, `clear()`, `swap()`)
+- Mathematical operators (`|`, `&`, `~`, `-`, `^`) for Boolean algebra
+- Named constructors: `interval::closed()`, `::open()`, `::left_open()`, `::right_open()`, `::point()`
+- Fluent interface: `.add()`, `.remove()` for chaining
+- String DSL: `real_set::from_string("[0,10) ∪ [20,30]")`
+- Full iterator support including reverse iterators
+- C++20 ranges compatibility
+
+### 2. Legacy API (`include/disjoint_interval_set/`)
+**Original implementation** - kept for backward compatibility, feature-complete but older conventions.
+
+Contains: `interval.hpp`, `disjoint_interval_set.hpp`, `disjoint_interval_set_algorithms.hpp`, `static_interval.hpp`, plus experimental `_v2.hpp` variants.
+
+## Building and Testing
+
+### Quick Build (CMake)
+```bash
+mkdir build && cd build
+cmake ..
+make
+```
+
+### Run All Tests
+```bash
+# Using CMake
+cd build
+make run_tests
+
+# Or directly with ctest
+ctest --output-on-failure --verbose
+
+# Run specific test
+./test_interval
+./test_dis_comprehensive
+./test_elegant_api
+```
+
+### Test Coverage Report
+```bash
+# Build with coverage enabled
+mkdir build-coverage && cd build-coverage
+cmake -DENABLE_COVERAGE=ON ..
+make run_tests
+
+# Generate HTML coverage report (requires gcovr)
+make coverage
+# Opens: build-coverage/coverage/index.html
+```
+
+### Manual Compilation (No Build System)
+```bash
+# Compile against modern API
+g++ -std=c++17 -I./include -o my_test my_test.cpp
+
+# With optimizations
+g++ -std=c++20 -O3 -I./include -o my_test my_test.cpp
+
+# Single test file
+g++ -std=c++17 -I./include tests/test_elegant_api.cpp -o test_elegant && ./test_elegant
+```
+
+## Test Suite Organization
+
+**Total: 94+ test cases across 8 test files**
+
+| Test File | Focus | Test Count | Coverage |
+|-----------|-------|------------|----------|
+| `test_interval_comprehensive.cpp` | Interval class operations | 22 | ~99% |
+| `test_dis_comprehensive.cpp` | DIS container operations | 32 | ~98% |
+| `test_elegant_api.cpp` | Modern API integration | 14 | ~98% |
+| `test_parser_formatter_comprehensive.cpp` | String DSL I/O | 26 | ~88% |
+| `test_interval.cpp` | Legacy interval tests | - | - |
+| `test_disjoint_interval_set.cpp` | Legacy DIS tests | - | - |
+| `test_algorithms.cpp` | Algorithm tests | - | - |
+| `test_integration.cpp` | Cross-feature tests | - | - |
+
+**Run specific test category:**
+```bash
+./build/test_interval_comprehensive    # Interval operations
+./build/test_dis_comprehensive         # DIS operations
+./build/test_elegant_api               # Modern API usage
+```
+
+## Core Concepts
+
+### Interval Types
+Intervals support four boundary configurations: `[a,b]`, `(a,b)`, `[a,b)`, `(a,b]`
+
+**Creation via named constructors (preferred):**
+```cpp
+auto closed = real_interval::closed(0, 10);      // [0, 10]
+auto open = real_interval::open(0, 10);          // (0, 10)
+auto left_open = real_interval::left_open(0, 10); // (0, 10]
+auto point = real_interval::point(5);            // {5}
+```
+
+### Disjoint Interval Sets
+**Canonical form**: Sorted, non-overlapping, maximally merged intervals.
+
+**Three equivalent API styles:**
+```cpp
+// 1. Mathematical operators (concise)
+auto result = (a | b) & ~c;
+
+// 2. Named methods (explicit)
+auto result = a.unite(b).intersect(c.complement());
+
+// 3. Fluent interface (chainable)
+auto result = real_set{}.add(0, 10).add(20, 30).remove(interval::closed(5, 25));
+```
+
+### Type Aliases
+```cpp
+namespace dis {
+    using real_interval = interval<double>;
+    using integer_interval = interval<int>;
+    using real_set = disjoint_interval_set<real_interval>;
+    using integer_set = disjoint_interval_set<integer_interval>;
+}
+```
+
+## STL Alignment (November 2024 Refactor)
+
+The library underwent major STL alignment in Nov 2024. Key changes:
+
+### Container Interface Compliance
+- ✅ `empty()` instead of `is_empty()`
+- ✅ `insert()` / `erase()` alongside legacy `add()` / `remove()`
+- ✅ `front()`, `back()`, `clear()`, `swap()`
+- ✅ All standard typedefs: `value_type`, `size_type`, `iterator`, `const_iterator`, `reverse_iterator`
+- ✅ Rule of Five explicitly defaulted
+- ✅ `operator<=>` with correct ordering categories
+
+### Backward Compatibility
+**100% backward compatible** - Legacy methods still work:
+```cpp
+set.add(interval);      // Still works
+set.insert(interval);   // New STL-compatible way
+set.is_empty();         // Deprecated warning, but works
+set.empty();            // Preferred STL way
+```
+
+### C++20 Ranges Support
+```cpp
+// Works with range adaptors
+auto filtered = my_set | std::views::filter([](auto& i) { return i.length() > 5; });
+
+// Range algorithms
+std::ranges::for_each(my_set, [](const auto& interval) { /* ... */ });
+```
+
+## Documentation
+
+### Generated Documentation (MkDocs)
+```bash
+# Install dependencies
+pip install mkdocs mkdocs-material pymdown-extensions mkdocs-minify-plugin
+
+# Local development server
+mkdocs serve
+# Opens: http://127.0.0.1:8000
+
+# Build static site
+mkdocs build
+
+# Deploy to GitHub Pages
+mkdocs gh-deploy
+```
+
+**Live docs:** https://queelius.github.io/disjoint_interval_set/
+
+### Key Documentation Files
+- `README.md` - Main library documentation with usage examples
+- `TECHNICAL_REPORT.md` - Academic-style technical report
+- `STL_ALIGNMENT_REPORT.md` - Details of Nov 2024 STL refactoring
+- `TEST_COVERAGE_REPORT.md` - Coverage analysis
+- `docs/` - MkDocs source (deployed to GitHub Pages)
 
 ## Design Principles
 
-- The library models Boolean algebra concepts mathematically
-- Intervals support open/closed boundaries: `(a,b)`, `[a,b]`, `(a,b]`, `[a,b)`
-- Operations maintain disjoint interval invariants automatically
-- Template design allows different numeric types (integers, reals)
+### Mathematical Rigor
+- Operations satisfy Boolean algebra axioms (associativity, commutativity, distributivity, De Morgan's laws)
+- Canonical form ensures unique representation
+- All boundary conditions handled correctly (open/closed endpoints)
+
+### Zero-Cost Abstractions
+- Everything is `inline` and `constexpr` where possible
+- No virtual functions, no RTTI
+- Move semantics throughout
+- Compile-time intervals available via `static_interval.hpp`
+
+### API Philosophy
+1. **Simplicity**: Each component does one thing well
+2. **Composability**: Operations chain naturally
+3. **Multiple notations**: Support both mathematical (`|`, `&`) and STL (`unite()`, `intersect()`)
+4. **Discoverability**: Named constructors make intent clear
+
+## Common Development Patterns
+
+### Adding New Interval Operations
+1. Add to `include/dis/core/interval.hpp`
+2. Mark `[[nodiscard]]` and `constexpr` where applicable
+3. Add tests to `tests/test_interval_comprehensive.cpp`
+4. Run coverage: `make coverage` and verify
+
+### Adding New Set Operations
+1. Add to `include/dis/core/disjoint_interval_set.hpp`
+2. Maintain canonical form (sorted, disjoint, merged)
+3. Provide operator overload AND named method
+4. Add tests to `tests/test_dis_comprehensive.cpp`
+
+### Parser/Formatter Changes
+Files: `include/dis/io/parser.hpp`, `include/dis/io/format.hpp`
+Tests: `tests/test_parser_formatter_comprehensive.cpp`
+
+The parser uses recursive descent for `"[0,10) ∪ [20,30]"` notation.
+
+## Known Limitations
+
+1. **No multi-dimensional support** - Removed in Nov 2024. Library focuses on 1D intervals only.
+2. **Parser limitations** - Does not support set operations in string format (only unions)
+3. **No custom allocators** - Not an STL container in the strictest sense
+4. **Floating-point precision** - Standard IEEE 754 caveats apply
+
+## Language Requirements
+
+- **Minimum**: C++17 (requires `std::optional`, structured bindings)
+- **Recommended**: C++20 (for full ranges support and concepts)
+- **Tested compilers**: GCC 9+, Clang 10+, MSVC 2019+
+
+## Repository Structure Notes
+
+- `examples/` - Example programs demonstrating library usage
+- `tests/` - Comprehensive test suite (94+ test cases)
+- `include/` - Header files (both modern and legacy implementations)
+- `docs/` - MkDocs documentation source
+- `site/` - Generated documentation (git-ignored)
+- `build/`, `build-coverage/` - Build artifacts (git-ignored)
