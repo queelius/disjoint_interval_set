@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.14)
-project(DisjointIntervalSet VERSION 1.1.0 LANGUAGES CXX)
+project(DisjointIntervalSet VERSION 1.1.2 LANGUAGES CXX)
 
 # Set C++ standard
 set(CMAKE_CXX_STANDARD 20)
@@ -8,6 +8,14 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 # Add include directory
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
+
+# Interface library for header-only installation
+add_library(libdis INTERFACE)
+target_include_directories(libdis INTERFACE
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+    $<INSTALL_INTERFACE:include>
+)
+target_compile_features(libdis INTERFACE cxx_std_17)
 
 # Enable testing
 enable_testing()
@@ -73,3 +81,44 @@ if(ENABLE_COVERAGE AND CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
         DEPENDS run_tests
     )
 endif()
+
+# Installation
+include(GNUInstallDirs)
+include(CMakePackageConfigHelpers)
+
+# Install headers
+install(DIRECTORY include/dis
+        DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+        FILES_MATCHING PATTERN "*.hpp")
+
+install(DIRECTORY include/disjoint_interval_set
+        DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+        FILES_MATCHING PATTERN "*.hpp")
+
+# Install library target
+install(TARGETS libdis
+        EXPORT libdis-targets
+        INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+
+# Create and install CMake config files
+write_basic_package_version_file(
+    "${CMAKE_CURRENT_BINARY_DIR}/libdis-config-version.cmake"
+    VERSION ${PROJECT_VERSION}
+    COMPATIBILITY SameMajorVersion
+)
+
+configure_package_config_file(
+    "${CMAKE_CURRENT_SOURCE_DIR}/cmake/libdis-config.cmake.in"
+    "${CMAKE_CURRENT_BINARY_DIR}/libdis-config.cmake"
+    INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/libdis
+)
+
+install(FILES
+    "${CMAKE_CURRENT_BINARY_DIR}/libdis-config.cmake"
+    "${CMAKE_CURRENT_BINARY_DIR}/libdis-config-version.cmake"
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/libdis)
+
+install(EXPORT libdis-targets
+        FILE libdis-targets.cmake
+        NAMESPACE libdis::
+        DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/libdis)
