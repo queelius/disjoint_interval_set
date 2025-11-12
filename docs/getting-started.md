@@ -35,13 +35,20 @@ sudo cp -r include/dis /usr/local/include/
 
 ## Requirements
 
+### Library Usage
 - **C++17 or later** (uses `std::optional`, structured bindings)
-- **No external dependencies**
-- Tested on:
+- **C++20 recommended** (for ranges and concepts)
+- **No external dependencies** for library usage
+- **Tested compilers**:
   - GCC 9+
   - Clang 10+
   - MSVC 2019+
   - Apple Clang 12+
+
+### Building and Testing (Optional)
+- **CMake 3.14+** for build system
+- **Google Test** for running the test suite
+- **gcovr** (optional) for HTML coverage reports: `pip install gcovr`
 
 ## Your First Program
 
@@ -251,10 +258,6 @@ integer_interval   // interval<int>
 // Set types
 real_set          // disjoint_interval_set<real_interval>
 integer_set       // disjoint_interval_set<integer_interval>
-
-// Multi-dimensional
-template<typename T> using rectangle = interval_nd<T, 2>;
-template<typename T> using box = interval_nd<T, 3>;
 ```
 
 ### Common Operations

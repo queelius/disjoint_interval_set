@@ -20,14 +20,15 @@ Working with intervals is fundamental in many domains—from computational geome
 - **Composability**: Features combine seamlessly without surprises
 - **Production Ready**: 97.46% test coverage on core implementation, 94 test cases
 
-## What's New (November 2024)
+## What's New (v1.1.0 - November 2024)
 
-Major library redesign focused on **STL alignment** and **API refinement**:
+Major library redesign focused on **STL alignment**, **API refinement**, and **testing framework standardization**:
 
 - **68 changes** implementing full STL container conformance
 - **100% backward compatibility** through deprecated-but-functional legacy API
 - **Zero breaking changes** to mathematical operators and factory methods
-- **All tests passing** (68/71 major test suites)
+- **Testing framework consolidation** for improved reliability
+- **All tests passing** with 97.46% core coverage
 
 ### Key Improvements
 
@@ -124,10 +125,16 @@ git clone https://github.com/yourusername/disjoint_interval_set.git
 
 ### Requirements
 
-- C++17 or later (uses `std::optional`, structured bindings)
-- C++20 recommended (for ranges and concepts)
-- No external dependencies
-- Tested on GCC 9+, Clang 10+, MSVC 2019+
+#### Library Usage
+- **C++17 or later** (uses `std::optional`, structured bindings)
+- **C++20 recommended** (for ranges and concepts)
+- **No external dependencies** for library usage
+- **Tested compilers**: GCC 9+, Clang 10+, MSVC 2019+
+
+#### Building and Testing (Optional)
+- **CMake 3.14+** for build system
+- **Google Test** for running the test suite
+- **gcovr** (optional) for HTML coverage reports: `pip install gcovr`
 
 ## Usage Examples
 
@@ -419,6 +426,27 @@ Current test coverage (as of November 2024):
 
 ### Running Tests
 
+#### Prerequisites
+First, install Google Test:
+
+```bash
+# Ubuntu/Debian
+sudo apt-get install libgtest-dev cmake
+
+# macOS with Homebrew
+brew install googletest
+
+# Or build from source
+git clone https://github.com/google/googletest.git
+cd googletest
+mkdir build && cd build
+cmake ..
+make
+sudo make install
+```
+
+#### Build and Test
+
 ```bash
 # Clone the repository
 git clone https://github.com/yourusername/disjoint_interval_set.git
@@ -430,8 +458,12 @@ cmake ..
 make
 ctest --verbose
 
-# Generate coverage report
+# Or use the convenience target
+make run_tests
+
+# Generate coverage report (requires gcovr: pip install gcovr)
 make coverage
+# Report opens at: build/coverage/index.html
 ```
 
 See the [full test coverage report](docs/reports/TEST_COVERAGE_REPORT.md) for detailed metrics.
@@ -624,7 +656,8 @@ We welcome contributions! Please see our [Contributing Guidelines](CONTRIBUTING.
 - [ ] PMR allocator support (if user demand exists)
 - [ ] Custom execution policies
 - [ ] Boost library submission
-- [ ] Multi-dimensional interval support (hyperrectangles)
+
+**Note**: Multi-dimensional interval support was removed in v1.1.0 to focus the library on 1D interval operations with maximum quality and performance.
 
 ## License
 

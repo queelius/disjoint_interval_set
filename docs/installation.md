@@ -10,7 +10,8 @@ DIS is a **header-only library** with **zero dependencies**. Installation simply
 
 ### Compiler Requirements
 
-- **C++17 or later** (uses `std::optional`, `std::ranges` concepts, structured bindings)
+- **C++17 or later** (uses `std::optional`, structured bindings)
+- **C++20 recommended** (for full ranges support and concepts)
 - One of the following compilers:
   - GCC 9.0 or later
   - Clang 10.0 or later
@@ -28,7 +29,14 @@ Tested on:
 
 ### Dependencies
 
-**None!** DIS has zero external dependencies beyond the C++ standard library.
+#### Library Usage
+**None!** DIS has zero external dependencies beyond the C++ standard library for library usage.
+
+#### Building and Testing (Optional)
+If you want to build and run the test suite:
+- **CMake 3.14+** for build system
+- **Google Test** for running tests
+- **gcovr** (optional) for HTML coverage reports: `pip install gcovr`
 
 ## Installation Methods
 
@@ -179,6 +187,29 @@ g++ -std=c++17 test.cpp -o test
 
 To verify the installation with the full test suite:
 
+#### Step 1: Install Google Test
+
+```bash
+# Ubuntu/Debian
+sudo apt-get install libgtest-dev cmake
+
+# macOS with Homebrew
+brew install googletest
+
+# Fedora/RHEL
+sudo dnf install gtest-devel cmake
+
+# Or build from source
+git clone https://github.com/google/googletest.git
+cd googletest
+mkdir build && cd build
+cmake ..
+make
+sudo make install
+```
+
+#### Step 2: Build and Run Tests
+
 ```bash
 # Clone repository
 git clone https://github.com/yourusername/disjoint_interval_set.git
@@ -191,19 +222,36 @@ make
 
 # Run tests
 ctest --verbose
+
+# Or use the convenience target
+make run_tests
+
+# Generate coverage report (requires gcovr: pip install gcovr)
+make coverage
+# Opens: build/coverage/index.html
 ```
 
 Expected output:
 ```
 Test project /path/to/build
-    Start 1: test_interval_comprehensive
-1/3 Test #1: test_interval_comprehensive ......   Passed    0.05 sec
-    Start 2: test_dis_comprehensive
-2/3 Test #2: test_dis_comprehensive ...........   Passed    0.08 sec
-    Start 3: test_elegant_api
-3/3 Test #3: test_elegant_api .................   Passed    0.03 sec
+    Start 1: test_interval
+1/8 Test #1: test_interval ....................   Passed    0.02 sec
+    Start 2: test_disjoint_interval_set
+2/8 Test #2: test_disjoint_interval_set .......   Passed    0.03 sec
+    Start 3: test_algorithms
+3/8 Test #3: test_algorithms ..................   Passed    0.02 sec
+    Start 4: test_integration
+4/8 Test #4: test_integration .................   Passed    0.02 sec
+    Start 5: test_elegant_api
+5/8 Test #5: test_elegant_api .................   Passed    0.03 sec
+    Start 6: test_interval_comprehensive
+6/8 Test #6: test_interval_comprehensive ......   Passed    0.05 sec
+    Start 7: test_dis_comprehensive
+7/8 Test #7: test_dis_comprehensive ...........   Passed    0.08 sec
+    Start 8: test_parser_formatter_comprehensive
+8/8 Test #8: test_parser_formatter_comprehensive Passed    0.04 sec
 
-100% tests passed, 0 tests failed out of 3
+100% tests passed, 0 tests failed out of 8
 ```
 
 ## IDE Setup

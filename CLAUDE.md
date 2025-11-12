@@ -47,6 +47,12 @@ Contains: `interval.hpp`, `disjoint_interval_set.hpp`, `disjoint_interval_set_al
 
 ## Building and Testing
 
+### Prerequisites
+- **C++17 compiler** (GCC 9+, Clang 10+, MSVC 2019+)
+- **Google Test** (required for running tests)
+- **gcovr** (optional, for HTML coverage reports: `pip install gcovr`)
+- **CMake 3.14+** (for build system)
+
 ### Quick Build (CMake)
 ```bash
 mkdir build && cd build
@@ -56,14 +62,14 @@ make
 
 ### Run All Tests
 ```bash
-# Using CMake
+# Using CMake (recommended)
 cd build
 make run_tests
 
 # Or directly with ctest
 ctest --output-on-failure --verbose
 
-# Run specific test
+# Run specific test executable
 ./test_interval
 ./test_dis_comprehensive
 ./test_elegant_api
@@ -71,12 +77,12 @@ ctest --output-on-failure --verbose
 
 ### Test Coverage Report
 ```bash
-# Build with coverage enabled
+# Build with coverage enabled (requires gcovr)
 mkdir build-coverage && cd build-coverage
 cmake -DENABLE_COVERAGE=ON ..
 make run_tests
 
-# Generate HTML coverage report (requires gcovr)
+# Generate HTML coverage report
 make coverage
 # Opens: build-coverage/coverage/index.html
 ```
@@ -89,8 +95,8 @@ g++ -std=c++17 -I./include -o my_test my_test.cpp
 # With optimizations
 g++ -std=c++20 -O3 -I./include -o my_test my_test.cpp
 
-# Single test file
-g++ -std=c++17 -I./include tests/test_elegant_api.cpp -o test_elegant && ./test_elegant
+# Single test file (requires Google Test)
+g++ -std=c++17 -I./include tests/test_elegant_api.cpp -o test_elegant -lgtest -lgtest_main -lpthread && ./test_elegant
 ```
 
 ## Test Suite Organization
@@ -190,18 +196,20 @@ std::ranges::for_each(my_set, [](const auto& interval) { /* ... */ });
 # Install dependencies
 pip install mkdocs mkdocs-material pymdown-extensions mkdocs-minify-plugin
 
-# Local development server
+# Local development server (auto-reloads on changes)
 mkdocs serve
 # Opens: http://127.0.0.1:8000
 
-# Build static site
+# Build static site (outputs to site/ directory)
 mkdocs build
 
-# Deploy to GitHub Pages
+# Deploy to GitHub Pages (requires push access)
 mkdocs gh-deploy
 ```
 
 **Live docs:** https://queelius.github.io/disjoint_interval_set/
+
+**Note:** The `site/` directory is git-ignored and should not be committed.
 
 ### Key Documentation Files
 - `README.md` - Main library documentation with usage examples
