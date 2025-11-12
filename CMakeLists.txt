@@ -17,11 +17,14 @@ target_include_directories(libdis INTERFACE
 )
 target_compile_features(libdis INTERFACE cxx_std_17)
 
-# Enable testing
-enable_testing()
+# Testing (optional)
+option(BUILD_TESTING "Build tests" ON)
+if(BUILD_TESTING)
+    enable_testing()
 
-# Find Google Test
-find_package(GTest REQUIRED)
+    # Find Google Test
+    find_package(GTest REQUIRED)
+endif()
 
 # Coverage options
 option(ENABLE_COVERAGE "Enable coverage reporting" ON)
@@ -30,6 +33,7 @@ if(ENABLE_COVERAGE AND CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
     add_link_options(--coverage)
 endif()
 
+if(BUILD_TESTING)
 # Test executables
 add_executable(test_interval tests/test_interval.cpp)
 target_link_libraries(test_interval GTest::gtest GTest::gtest_main pthread)
@@ -81,6 +85,8 @@ if(ENABLE_COVERAGE AND CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
         DEPENDS run_tests
     )
 endif()
+
+endif() # BUILD_TESTING
 
 # Installation
 include(GNUInstallDirs)
